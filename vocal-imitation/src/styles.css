@@ -1,0 +1,26 @@
+.max-w {
+    max-width: 1300px;
+}
+
+.w-85 {
+    width: 85% !important;
+}
+
+
+audio {
+    width: 220px;
+    vertical-align: middle;
+    height: 42px;
+}
+
+.table>tbody>tr>td {
+    vertical-align: middle;
+}
+
+.bg-good {
+    background-color: #0ea8c0 !important;
+}
+
+.bg-bad {
+    background-color: #e15731 !important;
+}

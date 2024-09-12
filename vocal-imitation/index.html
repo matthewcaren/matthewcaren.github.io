@@ -1,0 +1,1124 @@
+<!doctype html>
+
+<html>
+
+<head>
+    <title>Sketching with your voice | Sound Examples</title>
+    <link rel="icon" type="image/png" href="../img/favicon.png">
+    <link rel="stylesheet" href="src/bootstrap.css">
+    <link rel="stylesheet" href="src/styles.css">
+</head>
+
+<body class="px-3 pt-2 mx-auto max-w">
+    <div class="mt-4" id="top">
+        <h2 class="font-italic mb-1">Sketching with your voice</h2>
+        <p class="lead">Demo & sound examples</p>
+    </div>
+
+    <h3 class="mt-4 mb-3 font-weight-bold">Vocal foley demo</h3>
+    <p class="mb-4">We produced a short animation where all sound effects were vocal imitations synthesized by our system. All 11 sound effects in this video are available in the tables below, along with the original sounds that were imitated (referents). The quiet siren is <em>whispered</em> (last table).</p>
+    <div class="w-75 mx-auto mb-5">
+        <video controls class="w-100">
+            <source src="src/vocal-foley-1080.mov">
+        </video>
+    </div>
+
+
+    <h3 class="mt-4 font-weight-bold">Audio clips</h3> 
+    <div class="my-3">
+        <p class="mb-2">Recommended browsers: Chrome, Firefox, Safari.</p>
+        <p class="font-italic text-secondary mb-0">The Full and Baseline methods are summarized in Section 3.4 of the paper.</p>
+        <p class="font-italic text-secondary">Audio samples are top-1 prediction unless noted otherwise. Generated referents are looped twice in the audio clip for clarity.</p>
+
+        <div class="font-weight-bold mb-4">
+            <span>Contents:</span>
+            <a href="#flagship">Examples (hand-picked)</a>
+            <span class="px-1"> | </span>
+            <a href="#speaker-m">Random sample (masculine speaker)</a>
+            <span class="px-1"> | </span>
+            <a href="#speaker-f">Random sample (feminine speaker)</a>
+            <span class="px-1"> | </span>
+            <a href="#whisper">Whispering</a>
+            <span class="px-1"> | </span>
+            <a href="#cleanup">Vocal enhancer model</a>
+        </div>
+    </div>
+    
+    <h4 class="my-3 text-center" id="flagship">Examples</h4>
+    <table class="table w-100">
+        <thead class="thead-dark">
+            <tr>
+                <th class="align-middle">Referent Name</th>
+                <th class="align-middle">Referent</th>
+                <th class="align-middle">Human</th>
+                <th class="align-middle">Full Method</th>
+                <th class="align-middle">Baseline Method</th>
+            </tr>
+        </thead>
+        <tr>
+            <td>bell</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/bell_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/bell_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/bell_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/bell_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>racecar</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/vroom_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/vroom_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/vroom_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/vroom_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>door creak</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/squeak_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/squeak_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/squeak_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/squeak_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>horn section</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/horns_ref.wav">
+                </audio>
+            </td>
+            <td class="text-secondary">
+                not in VocalImitationSet
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/horns_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/horns_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>dripping water</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/drops_ref.wav">
+                </audio>
+            </td>
+            <td class="text-secondary">
+                not in VocalImitationSet
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/drops_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/drops_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+    </table>
+
+    <h4 class="py-2 my-4 text-center">-</h4>
+
+    <h4 class="mt-3 text-center" id="speaker-m">Random sample of 16 referents from VocalImitationSet (5,601 sounds)</h4>
+    <p class="text-center">Vocal tract model tuned to stereotypically <strong>masculine</strong> speaker</p>
+    <table class="table w-100">
+        <thead class="thead-dark">
+            <tr>
+                <th class="align-middle">Referent Name</th>
+                <th class="align-middle">Referent</th>
+                <th class="align-middle">Human</th>
+                <th class="align-middle">Full Method</th>
+                <th class="align-middle">Baseline Method</th>
+            </tr>
+        </thead>
+        <tr class="bg-good">
+            <td colspan="5" class="text-center font-weight-bold pt-2 pb-1 text-white">Matches human</td>
+        </tr>
+        <tr>
+            <td>leaves rustling</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/leaves_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/leaves_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/leaves_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/leaves_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>cat hiss</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/hiss_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/hiss_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/hiss_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/hiss_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>tapping</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/tapping_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/tapping_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/tapping_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/tapping_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>glasses clinking</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/clink_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/clink_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/clink_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/clink_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>cat meow</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/meow_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/meow_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/meow_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/meow_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>microwave</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/microwave_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/microwave_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/microwave_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/microwave_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>siren</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/siren_ref.wav">
+                    Your browser does not support audio playback.
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/siren_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/siren_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/siren_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>crow caw</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/caw_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/caw_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/caw_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/caw_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>motorboat</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/motorboat_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/motorboat_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/motorboat_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/motorboat_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>sawing</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/sawing_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/sawing_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/sawing_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/sawing_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                machine gun
+                <p class="small my-0 text-secondary">rank-3 result</p>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/gun_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/gun_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/gun_enh_3.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/gun_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>bees</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/bee_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/bee_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/bee_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/bee_naive_enh.wav">
+                </audio>
+            </td>
+        </tr> 
+    
+        <tr class="bg-bad">
+            <td colspan="5" class="text-center font-weight-bold pt-2 pb-1 text-white">Failure modes</td>
+        </tr>
+        <tr>
+            <td>
+                organ
+                <p class="small my-0 text-secondary">
+                    see paper for discussion of why our method does not support imitating music
+                </p>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/organ_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/organ_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/organ_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/organ_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                string ensemble
+                <p class="small my-0 text-secondary">
+                    see paper for discussion of why our method does not support imitating music
+                </p>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/strings_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/strings_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/strings_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/strings_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                heartbeat
+                <p class="small my-0 text-secondary">
+                    see paper for discussion of why our method does not match culturally-established onomatopoeia ("ba-boom")
+                </p>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/heartbeat_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/heartbeat_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/heartbeat_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/heartbeat_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                stomach grumble
+                <p class="small my-0 text-secondary">
+                    humans tend to use the velar fricative [x] to imitate this, which is out-of-scope for our vocal tract model; the
+                    model nontheless produces a qualitatively similar sound by other means
+                </p>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/stomach_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/stomach_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/stomach_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/stomach_naive_enh.wav">
+                </audio>
+            </td>
+        </tr>
+    </table>
+
+    <h4 class="py-2 my-4 text-center">-</h4>
+
+    <h4 class="my-3 text-center" id="speaker-f">Random sample of 16 referents from VocalImitationSet (5,601 sounds)</h4>
+    <p class="text-center">Vocal tract model tuned to stereotypically <strong>feminine</strong> speaker</p>
+    <table class="table w-100">
+        <thead class="thead-dark">
+            <tr>
+                <th class="align-middle">Referent Name</th>
+                <th class="align-middle">Referent</th>
+                <th class="align-middle">Human</th>
+                <th class="align-middle">Full Method</th>
+                <th class="align-middle">Baseline Method</th>
+            </tr>
+        </thead>
+        <tr class="bg-good">
+            <td colspan="5" class="text-center font-weight-bold pt-2 pb-1 text-white">Matches human</td>
+        </tr>
+        <tr>
+            <td>leaves rustling</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/leaves_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/leaves_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/leaves_enh_f.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/leaves_naive_enh_f.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>cat hiss</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/hiss_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/hiss_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/hiss_enh_f.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/hiss_naive_enh_f.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>tapping</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/tapping_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/tapping_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/tapping_enh_f.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/tapping_naive_enh_f.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>glasses clinking</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/clink_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/clink_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/clink_enh_f.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/clink_naive_enh_f.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>cat meow</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/meow_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/meow_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/meow_enh_f.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/meow_naive_enh_f.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>microwave</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/microwave_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/microwave_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/microwave_enh_f.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/microwave_naive_enh_f.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>siren</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/siren_ref.wav">
+                    Your browser does not support audio playback.
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/siren_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/siren_enh_f.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/siren_naive_enh_f.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>crow caw</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/caw_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/caw_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/caw_enh_f.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/caw_naive_enh_f.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>motorboat</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/motorboat_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/motorboat_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/motorboat_enh_f.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/motorboat_naive_enh_f.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>sawing</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/sawing_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/sawing_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/sawing_enh_f.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/sawing_naive_enh_f.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                machine gun
+                <p class="small my-0 text-secondary">rank-3 result</p>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/gun_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/gun_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/gun_enh_f_3.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/gun_naive_enh_f.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>bees</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/bee_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/bee_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/bee_enh_f.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/bee_naive_enh_f.wav">
+                </audio>
+            </td>
+        </tr>
+    
+        <tr class="bg-bad">
+            <td colspan="5" class="text-center font-weight-bold pt-2 pb-1 text-white">Failure modes</td>
+        </tr>
+        <tr>
+            <td>
+                organ
+                <p class="small my-0 text-secondary">
+                    see paper for discussion of why our method does not support imitating music
+                </p>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/organ_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/organ_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/organ_enh_f.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/organ_naive_enh_f.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                string ensemble
+                <p class="small my-0 text-secondary">
+                    see paper for discussion of why our method does not support imitating music
+                </p>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/strings_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/strings_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/strings_enh_f.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/strings_naive_enh_f.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                heartbeat
+                <p class="small my-0 text-secondary">
+                    see paper for discussion of why our method does not match culturally-established onomatopoeia
+                    ("ba-boom")
+                </p>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/heartbeat_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/heartbeat_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/heartbeat_enh_f.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/heartbeat_naive_enh_f.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                stomach grumble
+                <p class="small my-0 text-secondary">
+                    humans tend to use the velar fricative [x] to imitate this, which is out-of-scope for our vocal tract
+                    model; the
+                    model nontheless produces a qualitatively similar sound by other means
+                </p>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/stomach_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/stomach_vi.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/stomach_enh_f.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/stomach_naive_enh_f.wav">
+                </audio>
+            </td>
+        </tr>
+    </table>
+
+    <h4 class="py-2 my-4 text-center">-</h4>
+
+    <h4 class="my-3 text-center" id="whisper">Whispered utterances</h4>
+    <table class="table w-85 mx-auto">
+        <thead class="thead-dark">
+            <tr>
+                <th class="align-middle">Referent Name</th>
+                <th class="align-middle">Referent</th>
+                <th class="align-middle">Full Method</th>
+                <th class="align-middle">Baseline Method</th>
+            </tr>
+        </thead>
+        <tr>
+            <td>siren</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/siren_ref.wav">
+                    Your browser does not support audio playback.
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/siren_whisper_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/siren_naive_whisper.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>string ensemble</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/strings_ref.wav">
+                    Your browser does not support audio playback.
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/strings_whisper_enh.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/strings_whisper_naive.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td class="w-25">
+                leaves rustling
+                <p class="small my-0 text-secondary">
+                    this imitation is typically unvoiced even without the whispering constraint; indeed, our method continues to produce the same utterance under the whispering condition
+                </p>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/leaves_ref.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/leaves_enh_f.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/leaves_naive_enh_f.wav">
+                </audio>
+            </td>
+        </tr>
+    </table>
+
+    <h4 class="py-2 my-4 text-center">-</h4>
+    
+    <h4 class="my-3 text-center" id="cleanup">Effect of pretrained vocal enhancer model</h4>
+    <table class="table w-75 mx-auto">
+        <thead class="thead-dark">
+            <tr>
+                <th class="align-middle">Referent Name</th>
+                <th class="align-middle">Pre-cleanup model</th>
+                <th class="align-middle">Post-cleanup model</th>
+            </tr>
+        </thead>
+        <tr>
+            <td>siren</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/siren_ut.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/siren_enh.wav">
+                </audio>
+            </td>
+        </tr>
+        <tr>
+            <td>motorboat</td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/motorboat_ut.wav">
+                </audio>
+            </td>
+            <td>
+                <audio controls>
+                    <source src="src/audio/motorboat_enh.wav">
+                </audio>
+            </td>
+        </tr>
+    </table>
+
+    <div class="mt-5 mb-3 text-center font-weight-bold">
+        <a class="mx-auto" href="#top">back to top</a>
+    </div>
+</body>
+
+</html>
