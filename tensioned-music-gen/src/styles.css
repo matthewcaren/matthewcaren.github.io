@@ -1,0 +1,18 @@
+.max-w {
+    max-width: 1300px;
+}
+
+.w-85 {
+    width: 85% !important;
+}
+
+
+audio {
+    height: 50px;
+    width: 300px;
+    vertical-align: middle;
+}
+
+img.align-self {
+    align-self: center;
+}

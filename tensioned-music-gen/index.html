@@ -1,0 +1,54 @@
+<!doctype html>
+
+<html>
+
+<head>
+    <title>Controlling Symbolic Music Generation with Harmonic Tension</title>
+    <link rel="icon" type="image/png" href="../img/favicon.png">
+    <link rel="stylesheet" href="src/bootstrap.css">
+    <link rel="stylesheet" href="src/styles.css">
+</head>
+
+<body class="px-4 pt-2 mx-auto max-w">
+    <div class="mt-4" id="top">
+        <h2 class="font-italic mb-1">Controlling Symbolic Music Generation with Harmonic Tension</h2>
+        <p class="lead">Matthew Caren, Heidi Lei</p>
+        <p class="font-italic text-secondary">Recommended browsers: Chrome, Firefox, Safari.</p>
+
+    </div>
+
+    <h3 class="mt-4 font-weight-bold">Tonal tension model</h3> 
+    <p>We use Chew and Herreman's "ribbon" model of tonal tension to evaluate the degree of musical tension over time. We evaluate the overall degree of tension in successive quarter-note windows by measuring the cloud diameter of the set of all sounding pitches.</p>
+    <p class="my-0">Below is an example of the results of this tension model applied to a musical example (as well as a simple implementation of Lerdhal's model of tonal tension, for comparison).</p>
+    <div class="d-flex flex-row align-items-center">
+        <img src="src/img/imagine-score.png" class="img-fluid h-50 w-50 p-4">
+        <img src="src/img/imagine-tension.png" class="img-fluid h-50 w-50 p-4">
+    </div>
+    <div class="d-flex flex-row justify-content-center align-items-center">
+        <p class="pr-3 my-auto font-italic text-secondary">Listen to the musical exerpt here:</p>
+        <audio controls>
+            <source src="src/audio/imagine.mp3">
+        </audio>
+    </div>
+    
+
+    <!-- <h3 class="mt-4 font-weight-bold">Generation examples</h3>
+    <p>We are currently fine-tuning the model based on our augmented dataset that includes tension information.</p>
+    <div class="d-flex flex-row align-items-left my-3">
+        <p class="pr-3 my-auto font-italic text-secondary">Generation 1:</p>
+        <audio controls>
+            <source src="src/audio/tbd.wav">
+        </audio>
+    </div>
+    <div class="d-flex flex-row align-items-left my-3">
+        <p class="pr-3 my-auto font-italic text-secondary">Generation 2:</p>
+        <audio controls>
+            <source src="src/audio/tbd.wav">
+        </audio>
+    </div> -->
+
+    <h3 class="mt-4 font-weight-bold">Evaluation</h3>
+    <p>coming soon!</p>
+</body>
+
+</html>
