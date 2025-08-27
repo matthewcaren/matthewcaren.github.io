@@ -1,0 +1,82 @@
+/* global stuff */
+
+a {
+    color: #148cbf !important;
+    text-decoration: none !important;
+}
+
+.serif {
+    font-family: "Playfair Display", serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
+    font-size: 2.1em !important;
+}
+
+@media (min-width: 960px) {
+    .width-squish {
+        max-width: 90%;
+        min-width: 24em !important;
+    }
+
+    .padding-y-expand {
+        padding-top: 3rem !important;
+        padding-bottom: 3rem !important;
+    }
+}
+
+p, li {
+    font-weight: 300;
+    /* color: #545460; */
+    color: rgb(80, 83, 85);
+}
+
+li {
+    margin-bottom: .5rem;
+}
+
+.stress {
+    font-weight: 600;
+    color: black;
+}
+
+.nav-link {
+    color: black !important;
+    font-weight: 400;
+    margin-bottom: 0.1rem;
+}
+
+.logo {
+    max-height: 2.5rem !important;
+}
+
+
+/* single elements */
+
+#name {
+    letter-spacing: 0.03em;
+    font-size: 1.4em;
+    font-weight: 550;
+    color: black;
+}
+
+#portrait {
+    max-width: 12rem !important;
+}
+
+
+#big-statement {
+    color: black;
+    font-size: 2.25em !important;
+    line-height: 125%;
+    font-weight: 700;
+}
+
+i {
+    font-size: 2rem;
+    color: #000;
+}
+
+i:hover {
+    color: #222;
+}
