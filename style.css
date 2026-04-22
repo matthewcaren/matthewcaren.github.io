@@ -1,34 +1,49 @@
 /* Add your CSS styles here */
+html {
+    overflow-x: clip;
+}
+
 body {
     font-family: "Roboto", Helvetica, sans-serif;
-    margin: 0;
-    padding: 10px;
+    /* font-family: "IBM Plex Mono", monospace; */
+    font-weight: 300;
+    margin: 0 0 0 0;
+    padding-top: 10px;
     box-sizing: border-box;
     background-color: white;
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
+    overscroll-behavior: none;
 }
 
 
 h1 {
-    font-size: 3.5em;
+    font-size: 4.3em;
     font-weight: 800;
-}
-
-h2 {
-    font-size: 1.5em;
-    font-weight: 600;
+    font-family: 'n27', sans-serif;
 }
 
 h3 {
-    font-size: 1em;
+    font-size: 1.75em;
+    font-weight: 500;
+    line-height: 1.1;
+    margin-bottom: 0.5em;
+}
+
+h4 {
+    font-size: 0.95em;
     font-weight: 600;
 }
 
 p {
-    font-weight: 300;
-    line-height: 1.5em;
+    font-weight: 200;
+    line-height: 1.25;
+    font-size: 1.05em;
+}
+
+.smalltext {
+    font-size: 0.9em;
 }
 
 a {
@@ -38,6 +53,7 @@ a {
 
 .emphasized {
     color: orangered;
+    /* color: red; */
 }
 
 .section-top {
@@ -46,22 +62,64 @@ a {
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    padding: 0 10px;
+    padding: 0px 10px;
     min-height: 400px;
-    ;
 }
 
 .section-main {
-    margin: 0 0 100px 0;
+    margin: 0 0 0 0;
     width: 100%;
-    padding: 0px 30px;
+    padding: 30px 30px;
     box-sizing: border-box;
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 50px;
-    justify-content: left;
+    justify-content: flex-start;
     align-content: flex-start;
+}
+
+.whitespace-gaps {
+    gap: 50px;
+}
+
+.footnote-toggle {
+    font-size: 0.5em;
+    font-weight: 400;
+    vertical-align: super;
+    cursor: pointer;
+    margin-left: 0.2em;
+    user-select: none;
+    color: gray;
+}
+
+.footnote-text {
+    display: none;
+    width: 100%;
+    margin-top: -0.8em;
+    margin-bottom: 1em;
+}
+
+.footnote-text a {
+    font-weight: 300;
+}
+
+.footnote-text.footnote-visible {
+    display: block;
+}
+
+.full-video-wrap {
+    width: 100%;
+    margin: 30px 0;
+}
+
+.full-video-wrap video {
+    width: 100%;
+    display: block;
+}
+
+.caption {
+    text-align: right;
+    margin: 5px 5px 0 0;
 }
 
 .wide-block {
@@ -77,6 +135,22 @@ a {
     height: 300px;
     flex-shrink: 0;
     box-sizing: border-box;
+}
+
+table {
+    font-weight: 300;
+    font-size: 1.3em;
+    margin-bottom: 100px;
+    line-height: 1.05;
+    width: 100%;
+}
+
+table a {
+    font-weight: 300;
+}
+
+td:first-child {
+    padding-right: 2em;
 }
 
 /* Image fills the block and is cropped to a square */
@@ -121,7 +195,7 @@ a {
 .row {
     border-bottom: 1px solid black;
     padding: 10px 10px;
-    min-height: 50px;
+    min-height: 4.5em;
     display: flex;
     align-items: flex-end;
     position: relative;
@@ -157,4 +231,11 @@ a {
     height: 40px;
     object-fit: contain;
     margin-right: 10px;
+}
+
+footer {
+    width: 100%;
+    text-align: center;
+    color: black;
+    margin-top: 30px;
 }
