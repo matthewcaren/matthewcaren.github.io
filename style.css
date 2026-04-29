@@ -24,6 +24,12 @@ h1 {
     font-family: 'n27', sans-serif;
 }
 
+@media (max-width: 450px) {
+    h1 {
+        font-size: 4em;
+    }
+}
+
 h3 {
     font-size: 1.75em;
     font-weight: 500;
@@ -141,7 +147,7 @@ table {
     font-weight: 300;
     font-size: 1.3em;
     margin-bottom: 100px;
-    line-height: 1.05;
+    line-height: 1.1;
     width: 100%;
 }
 
