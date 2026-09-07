@@ -38,13 +38,11 @@
     </div>
     <div class="section-main whitespace-gaps">
         <div class="wide-block">
-            <h3>i'm a researcher, engineer, designer & artist.</h3>
-            <h3>i explore <span class="emphasized">human expression through sound</span>—and how technology understands,
-                augments, and inhibits it.</h3>
+            <h3>i'm a researcher, engineer & artist.</h3>
+            <h3>i'm fascinated by <span class="emphasized">human expression</span>—and how technologies help us create, manipulate, and understand <span class="emphasized">sound</span>.</h3>
         </div>
         <div class="block">
-            <p>my work spans musical instrument design, cognitive science, large-scale installations, AI research,
-                composition, electrical engineering, and poetry.</p>
+            <p>my work spans HCI, musical instrument design, cognitive science, art installations, electronics, and AI research.</p>
         </div>
         <div class="block">
             <p>i'm currently a phd student at stanford.</p>
@@ -61,12 +59,19 @@
     </div>
 
     <div class="section-main">
-        <h3>selected work<sup class="footnote-toggle"
+        <h3>work<sup class="footnote-toggle"
                 onclick="this.parentElement.nextElementSibling.classList.toggle('footnote-visible')">[1]</sup></h3>
         <p class="footnote-text smalltext">i do not believe in separating my science, art, and engineering. they are <a
                 href="https://www.poetryfoundation.org/poems/52577/monet-refuses-the-operation-56d231289e6db"
                 target="_blank">lost children of the same great continent</a> <a href="https://cs.stanford.edu/~kach/"
                 target="_blank" style="text-decoration: none; font-weight: 200; color: gray;">[2]</a></p>
+        
+        <div class="portfolio-carousel">
+            <button class="carousel-btn" id="carousel-prev">←</button>
+            <div class="portfolio-grid" id="portfolio-grid"></div>
+            <button class="carousel-btn" id="carousel-next">→</button>
+        </div>
+
         <table>
             <tr>
                 <td>2026</td>
@@ -81,7 +86,7 @@
             </tr>
             <tr>
                 <td>2026</td>
-                <td>Lagu Hantu, New Interfaces for Musical Expression / London, UK</td>
+                <td>Lagu Hantu, NIME / London, UK</td>
                 <td>paper</td>
             </tr>
             <tr>
@@ -109,7 +114,7 @@
             </tr>
             <tr>
                 <td>2025</td>
-                <td><a href="https://futurefinds.cargo.site/" target="_blank">Future Finds</a>, Bathers Library /
+                <td>MP3 player, <a href="https://futurefinds.cargo.site/" target="_blank">Future Finds</a>, Bathers Library /
                     Oakland, CA</td>
                 <td>exhibition</td>
             </tr>
@@ -135,7 +140,7 @@
             <tr>
                 <td>2025</td>
                 <td><a href="https://nime.org/proc/nime2025_93/index.html" target="_blank">Melia: An Expressive
-                        Harmonizer at the Limits of AI</a>, New Interfaces for Musical Expression / Canberra,
+                        Harmonizer at the Limits of AI</a>, NIME / Canberra,
                     Australia</td>
                 <td>paper</td>
             </tr>
@@ -179,36 +184,33 @@
     </div>
 
     <div class="section-main whitespace-gaps">
+        <div class="block bordered">
+            <canvas id="ballCanvas"></canvas>
+        </div>
+    </div>
+
+    <div class="section-main">
+        <div class="text-block" style="max-width: 1200px; margin-right: 2em;">
+            <p>at stanford, i research in the <a href="https://cogtoolslab.github.io/">cognitive tools lab</a> [judy fan] and <a href="https://shape.stanford.edu/">shapelab</a> [sean follmer].</p>
+            <br>
+            <p>i went to college at MIT, where i studied computer science, music, math, and literature. i worked on machine listening systems [<a style="font-weight: 200;"
+            href="https://mta.mit.edu/person/eran-egozy">eran egozy</a>], poetry and AI [<a style="font-weight: 200;"
+            href="https://www.drjoshuabennett.com/">joshua bennett</a>], and vocal communication [<a
+            style="font-weight: 200;" href="https://cocosci.mit.edu/josh-tenenbaum/">josh tenenbaum</a>, <a
+            style="font-weight: 200;" href="https://people.csail.mit.edu/jrk/">jrk</a>].</p>
+            <br>
+            <p>i'm one half of <a href="https://badsciencestudio.github.io/">bad science</a>.</p>
+            <br>
+        </div>
+    </div>
+
+    <div class="section-main whitespace-gaps">
         <div class="block"></div>
         <div class="block"></div>
         <div class="block">
             <div class="image-wrap">
                 <img class="full-image" src="img/scan.jpg" alt="photocopy of matt caren">
             </div>
-        </div>
-    </div>
-
-    <div class="section-main whitespace-gaps">
-        <div class="block bordered">
-            <canvas id="ballCanvas"></canvas>
-        </div>
-        <div class="block"></div>
-        <div class="block">
-            <p>at stanford, i research in the <a href="https://cogtoolslab.github.io/">cognitive tools lab</a> [judy fan]
-                and <a href="https://shape.stanford.edu/">shapelab</a> [sean follmer].</p>
-        </div>
-        <div class="block">
-            <p>i went to college at MIT, where i studied computer science, mathematics, music, and literature.</p>
-        </div>
-        <div class="block">
-            <p>at MIT, i developed machine listening systems [<a href="https://mta.mit.edu/person/eran-egozy">eran
-                    egozy</a>], researched poetry and the computer [<a href="https://www.drjoshuabennett.com/">joshua
-                    bennett</a>], and studied vocal communication [<a href="https://cocosci.mit.edu/josh-tenenbaum/">josh
-                    tenenbaum</a>, <a href="https://people.csail.mit.edu/jrk/">jrk</a>].</p>
-        </div>
-        <div class="block"></div>
-        <div class="block">
-            <p>i'm one half of <a href="https://badsciencestudio.github.io/">bad science</a>.</p>
         </div>
     </div>
 
@@ -219,6 +221,7 @@
     <script src="js/ball.js" defer></script>
     <script src="js/conway.js" defer></script>
     <script src="js/scroll-cards.js" defer></script>
+    <script src="js/portfolio.js" defer></script>
 </body>
 
 </html>
