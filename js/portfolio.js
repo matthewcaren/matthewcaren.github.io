@@ -2,8 +2,8 @@ const PORTFOLIO_ITEMS = [
   { img: "img/melia-iso.png",           alt: "Melia harmonizer",  title: "melia",               description: "a musical instrument that lets you play AI failure",       link: "https://nime.org/proc/nime2025_93/index.html" },
   { img: "img/mp3-iso.png",             alt: "mp3",               title: "doomsday mp3 player", description: "simulating a million years of digital bit rot" },
   { img: "img/vocal-imitation-iso.png", alt: "vocal imitation", title: "vocal imitation", description: "what makes us so good at imitating sounds?", link: "https://news.mit.edu/2025/teaching-ai-communicate-sounds-humans-do-0109" },
-  { img: "img/quantumclock-iso.png", alt: "quantum clock", title: "quantum clock", description: "telling time through random quantum events", link: "https://badsciencestudio.github.io/works/quantumclock" },
-  { img: "img/bloodcomputer-iso.png",   alt: "blood computer",    title: "blood computer",      description: "a chatbot that runs on the substance of life",          link: "https://badsciencestudio.github.io/works/bloodcomputer" },
+  { img: "img/quantumclock-iso.png", alt: "quantum clock", title: "quantum clock", description: "telling time through random quantum events", link: "https://badsciencestudio.com/works/quantumclock" },
+  { img: "img/bloodcomputer-iso.png",   alt: "blood computer",    title: "blood computer",      description: "a chatbot that runs on the substance of life",          link: "https://badsciencestudio.com/works/bloodcomputer" },
   { img: "img/drummify-iso.png",        alt: "drummify",          title: "drummify",            description: "a device that transforms any table into an interactive drum" },
 ];
 
