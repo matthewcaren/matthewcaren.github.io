@@ -209,7 +209,7 @@ th:last-child {
     width: 100%;
     gap: 16px;
     margin-top: -20px;
-    margin-bottom: 80px;
+    margin-bottom: 50px;
 }
 
 .carousel-btn {
@@ -241,6 +241,8 @@ th:last-child {
 .portfolio-card-img {
     position: relative;
     width: 100%;
+    max-width: 14em;
+    margin: 0 auto;
     aspect-ratio: 1 / 1;
     background: #ffffff;
     display: flex;
