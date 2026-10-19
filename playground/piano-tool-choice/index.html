@@ -1,0 +1,2148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sound pictionary!</title>
+  <script src="https://unpkg.com/jspsych@7.3.4"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-html-form@1.0.3"></script>
+  <link href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #ffffff;
+      --ink: #1b1d24;
+      --muted: #6d7280;
+      --rule: #dedbd3;
+      --live: #2f6f5e;
+      --good: #2e7d4f;
+      --bad: #b3372f;
+      --playable: #2f6fd0;
+    }
+
+    html,
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      margin: 0;
+    }
+
+    body {
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    }
+
+    .jspsych-display-element {
+      font-size: 17px;
+    }
+
+    .jspsych-content {
+      max-width: 1000px;
+    }
+
+    h1 {
+      font-size: 30px;
+      font-weight: 600;
+      margin: 0 0 18px;
+    }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0 0 12px;
+    }
+
+    p {
+      line-height: 1.55;
+      max-width: 64ch;
+      margin: 0 auto 14px;
+    }
+
+    .lead {
+      text-align: left;
+    }
+
+    ul {
+      max-width: 64ch;
+      margin: 0 auto 14px;
+      text-align: left;
+      line-height: 1.55;
+    }
+
+    .stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    canvas {
+      background: #fff;
+      border: 1px solid var(--rule);
+      border-radius: 0;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      max-width: 100%;
+    }
+
+    canvas.live {
+      cursor: crosshair;
+    }
+
+    .instrument {
+      position: relative;
+      transition: opacity .25s;
+    }
+
+
+    .playable-text {
+      color: var(--playable);
+    }
+
+    .instrument.gone {
+      display: none;
+    }
+
+    .instrument.locked {
+      opacity: .32;
+      pointer-events: none;
+      filter: grayscale(1);
+    }
+
+    .lockmsg {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .instrument:not(.locked) .lockmsg {
+      display: none;
+    }
+
+    .cues {
+      display: flex;
+      gap: 26px;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .cue {
+      width: 220px;
+      text-align: center;
+    }
+
+    .cuebox {
+      border: 2px solid;
+      border-radius: 0;
+      padding: 20px 12px;
+      cursor: pointer;
+      transition: background .15s, transform .12s;
+    }
+
+    .cuebox .tag {
+      font-size: 30px;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    .cuebox .hint {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    /* the two options: neutral while listening, then target / other */
+    .cue.opt .cuebox {
+      border-color: #9aa0ab;
+      background: #f6f7f8;
+    }
+
+    .cue.opt .cuebox:hover {
+      background: #dde0e6;
+      transform: translateY(-1px);
+    }
+
+    .cue.opt .cuebox.playing {
+      background: #c4cad3;
+      border-color: #5f6773;
+      transform: translateY(-1px);
+    }
+
+    .cue.opt .tag {
+      color: var(--ink);
+      font-size: 22px;
+    }
+
+    .cue.opt.target .cuebox {
+      border-color: var(--good);
+      border-width: 3px;
+      background: #f0f8f2;
+    }
+
+    .cue.opt.target .cuebox:hover {
+      background: #c3e6d1;
+    }
+
+    .cue.opt.target .cuebox.playing {
+      background: #94d4ac;
+      border-color: #1d5c3a;
+    }
+
+    .cue.opt.target .tag {
+      color: var(--good);
+    }
+
+    .cue.opt.other .cuebox {
+      opacity: .7;
+    }
+
+    .cue .mark .heard,
+    .cue .mark .omark {
+      font-size: 15px;
+      color: var(--muted);
+    }
+
+    .cue .mark .tmark {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--good);
+    }
+
+    .choose {
+      width: min(460px, 100%);
+    }
+
+    .choose .prompt {
+      font-size: 18px;
+      margin: 4px auto 0;
+    }
+
+    .cue.you {
+      margin-left: 52px;
+      /* with the 26px gap: 3x the space between the options */
+    }
+
+    .cue.you .cuebox {
+      border-color: #9aa0ab;
+      background: #f6f7f8;
+    }
+
+    .cue.you .cuebox:hover {
+      background: #dde0e6;
+      transform: translateY(-1px);
+    }
+
+    .cue.you .cuebox.playing {
+      background: #c4cad3;
+      border-color: #5f6773;
+      transform: translateY(-1px);
+    }
+
+    .cue.you .tag {
+      color: var(--ink);
+      font-size: 20px;
+      letter-spacing: .02em;
+    }
+
+    .cue .mark {
+      font-size: 26px;
+      margin-top: 10px;
+    }
+
+    .caption {
+      color: var(--muted);
+      font-size: 15px;
+      min-height: 24px;
+      margin: 0;
+    }
+
+    .bigcount {
+      font-size: 40px;
+      font-weight: 600;
+      color: var(--live);
+    }
+
+    .btnrow {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 2em;
+    }
+
+    button.act {
+      font: inherit;
+      font-size: 16px;
+      padding: 9px 20px;
+      border: 1px solid var(--ink);
+      background: var(--ink);
+      color: var(--paper);
+      border-radius: 0;
+      cursor: pointer;
+    }
+
+    button.act.ghost {
+      background: transparent;
+      color: var(--ink);
+    }
+
+    button.act:disabled {
+      opacity: .35;
+      cursor: default;
+    }
+
+    button.act:focus-visible {
+      outline: 3px solid var(--live);
+      outline-offset: 2px;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 14px;
+      margin: 0;
+    }
+
+    label {
+      display: block;
+      text-align: left;
+      max-width: 64ch;
+      margin: 0 auto 14px;
+    }
+
+    select {
+      font: inherit;
+      padding: 6px 8px;
+      border: 1px solid var(--rule);
+      border-radius: 0;
+      background: #fff;
+    }
+
+    .points {
+      font-size: 15px;
+      color: var(--good);
+      font-weight: 600;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        transition: none !important;
+      }
+    }
+
+    /* the assistance slider: a thick green track with a filled part up to the thumb */
+    .alpha-pick {
+      --thumb: 28px;
+      /* thumb diameter, also used to align the tick labels */
+      --track: 12px;
+      width: min(440px, 100%);
+      margin: 6px auto 18px;
+      text-align: left;
+      border-radius: 0;
+    }
+
+    .alpha-pick .alpha-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 4px;
+    }
+
+    .alpha-pick label {
+      margin: 0;
+    }
+
+    .alpha-pick output {
+      color: var(--good);
+      font-weight: 600;
+    }
+
+    .alpha-pick input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: var(--thumb);
+      margin: 0;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .alpha-pick input[type="range"]::-webkit-slider-runnable-track {
+      height: var(--track);
+      border-radius: 0;
+      background: linear-gradient(to right,
+          var(--good) 0,
+          var(--good) calc(var(--thumb) / 2 + (100% - var(--thumb)) * var(--frac, 0.5)),
+          #d9e4dc 0);
+    }
+
+    .alpha-pick input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: var(--thumb);
+      height: var(--thumb);
+      margin-top: calc((var(--track) - var(--thumb)) / 2);
+      border-radius: 0;
+      background: var(--good);
+      border: 4px solid #fff;
+      box-shadow: 0 0 0 1px var(--good), 0 1px 4px rgba(0, 0, 0, .3);
+    }
+
+    .alpha-pick input[type="range"]::-moz-range-track {
+      height: var(--track);
+      border-radius: 0;
+      background: #d9e4dc;
+    }
+
+    .alpha-pick input[type="range"]::-moz-range-progress {
+      height: var(--track);
+      border-radius: 0;
+      background: var(--good);
+    }
+
+    .alpha-pick input[type="range"]::-moz-range-thumb {
+      width: calc(var(--thumb) - 8px);
+      height: calc(var(--thumb) - 8px);
+      border-radius: 0;
+      background: var(--good);
+      border: 4px solid #fff;
+      box-shadow: 0 0 0 1px var(--good), 0 1px 4px rgba(0, 0, 0, .3);
+    }
+
+    .alpha-pick input[type="range"]:focus-visible {
+      outline: 2px solid var(--good);
+      outline-offset: 4px;
+    }
+
+    .alpha-pick .alpha-ticks {
+      position: relative;
+      height: 1.3em;
+      margin-top: 4px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .alpha-pick .alpha-ticks span {
+      position: absolute;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      border-radius: 0;
+      padding: 0 3px;
+    }
+
+    .alpha-pick .alpha-ticks span.sel {
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .alpha-pick.fixed input[type="range"] {
+      pointer-events: none;
+      cursor: default;
+    }
+
+    /* ---- tutorial: pulsing blue highlights ---- */
+    @keyframes hlpulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 2px rgba(47, 111, 208, .25);
+      }
+
+      50% {
+        box-shadow: 0 0 0 6px rgba(47, 111, 208, .85);
+      }
+    }
+
+    @keyframes hlcolor {
+
+      0%,
+      100% {
+        color: rgba(47, 111, 208, .45);
+      }
+
+      50% {
+        color: rgba(47, 111, 208, 1);
+      }
+    }
+
+    .hl {
+      animation: hlpulse 1.3s ease-in-out infinite;
+    }
+
+    .instrument.hl {
+      border-radius: 0;
+    }
+
+    .alpha-pick {
+      position: relative;
+    }
+
+    .alpha-pick.hl {
+      animation: none;
+    }
+
+    .alpha-pick.hl::before {
+      content: "";
+      position: absolute;
+      inset: -14px -22px -10px;
+      border-radius: 0;
+      animation: hlpulse 1.3s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .instrument canvas {
+      display: block;
+    }
+
+    .hl-bars {
+      position: absolute;
+      left: .6%;
+      right: .6%;
+      top: 2.5%;
+      height: 13.5%;
+      border-radius: 0;
+      pointer-events: none;
+      display: none;
+    }
+
+    .hl-bars.hl {
+      display: block;
+    }
+
+    .dir-arrow {
+      position: absolute;
+      left: 6%;
+      right: 6%;
+      bottom: 12%;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      color: #9aa0ab;
+      pointer-events: none;
+    }
+
+    .dir-arrow.on {
+      display: flex;
+    }
+
+    .dir-arrow.hl {
+      animation: hlcolor 1.3s ease-in-out infinite;
+      box-shadow: none;
+    }
+
+    .dir-arrow svg {
+      flex: 1;
+      height: 16px;
+    }
+
+    .tick-hl {
+      animation: hlpulse 1.3s ease-in-out infinite;
+      color: var(--playable);
+    }
+
+    .steps p {
+      transition: opacity .35s;
+    }
+
+    .steps p.pending {
+      visibility: hidden;
+      opacity: 0;
+    }
+
+    .secret {
+      color: #c62828;
+      font-size: 13px;
+      margin: -6px auto 0;
+    }
+
+    /* square corners everywhere, including jsPsych's own buttons and
+       form fields; only the slider's round thumb is exempt */
+    *,
+    *::before,
+    *::after {
+      border-radius: 0 !important;
+    }
+
+    .alpha-pick input[type="range"]::-webkit-slider-thumb {
+      border-radius: 50% !important;
+    }
+
+    .alpha-pick input[type="range"]::-moz-range-thumb {
+      border-radius: 50% !important;
+    }
+
+    /* ---- target reveal ---- */
+    .cue.opt .cuebox {
+      position: relative;
+    }
+
+    @keyframes revealpop {
+      0% {
+        transform: scale(1);
+      }
+
+      35% {
+        transform: scale(1.08);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @keyframes revealring {
+      0% {
+        box-shadow: 0 0 0 0 rgba(46, 125, 79, .55);
+      }
+
+      100% {
+        box-shadow: 0 0 0 26px rgba(46, 125, 79, 0);
+      }
+    }
+
+
+    @keyframes markin {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    .cue.opt.target.revealing .cuebox {
+      animation: revealpop .55s ease-out, revealring .9s ease-out;
+    }
+
+
+    .cue .mark .tmark {
+      display: inline-block;
+      animation: markin .45s ease-out .15s both;
+    }
+  </style>
+
+<body></body>
+<script>
+  /* ============================================================
+     Sound Pictionary, imitation pilot: choosing how much assistance
+
+     Each round the participant hears two short melodies, unlabeled,
+     then learns which one is their target. They choose how much
+     "assistance" (alpha) they want for that round, then imitate the
+     target on the instrument. Cover story: a randomly matched partner
+     will later hear the imitation and guess which of the two it was.
+
+     The instrument has one parameter, alpha. The canvas is a
+     horizontal playing surface split into 13 note regions, chromatic
+     A3..A4, low on the left and high on the right, shown by gray
+     markers along its top edge. After every note the regions resize
+     according to a melodic model, by an amount set by alpha:
+
+       alpha = 0        static piano: equal regions
+       0 < alpha < 1    region width ∝ p(note)^(alpha / (1 - alpha))
+       alpha = 1        only the most probable note in each direction
+
+     For alpha > 0 the layout is anchored at the last click: a band of
+     ±EPS px around it repeats the last note, everything to its right
+     plays a higher note and everything to its left a lower one. The
+     band never sits closer than EDGE_MARGIN to an edge with notes
+     beyond it, so there is always room to go up and down; for clicks
+     that close to an edge, "higher" means right of the band (the
+     bright marker) rather than right of the click. Each
+     recording (and each tutorial screen) starts from equal regions;
+     within it, the layout keeps adapting and never resets on a timeout.
+     ============================================================ */
+
+  /* the assistance slider snaps to these values; participants only
+     ever see the labels */
+  const ALPHA_VALUES = [0, 0.1, 0.3, 0.6, 1];
+  const ASSIST_LABELS = ["none", "a little", "medium", "a lot", "maximum"];
+  const ALPHA_MID_INDEX = 2;                 // every round's slider starts here
+  const TUTORIAL_ALPHAS = { none: 0, medium: 0.3, lots: 0.6 };
+  function instrumentName(alpha) {
+    if (alpha === 0) return "piano";
+    if (alpha === 1) return "max-likelihood";
+    return "alpha_" + alpha.toFixed(1);
+  }
+  const assistLabel = a => ASSIST_LABELS[ALPHA_VALUES.indexOf(a)];
+
+  const CFG = {
+    MAX_REC_MS: 10000,      // hard cap on a single recording
+    SILENCE_MS: 2000,       // quiet this long ends a recording
+    BASE_HZ: 220,           // A3
+    W: 760, H: 200,
+    EPS: 16,                // half-width of the repeat band (canvas px)
+    EDGE_MARGIN: 74,        // the band's centre stays this far from an edge that has notes
+    // beyond it: one piano key (760/13 ≈ 58px) plus EPS of room
+    MARKER_TOP: 10,         // markers sit along the top edge
+    MARKER_H: 17,           // ≈1em at full size
+    MARKER_GAP: 2,          // gap between neighbouring markers
+    TWEEN_MS: 80,           // marker resize animation; clicks always use the final layout
+    MOUSE_SAMPLE_MS: 50,
+    MAX_ATTEMPTS: 6,
+    TUTORIAL_MIN_NOTES: 6,  // presses needed before each tutorial screen can be left
+    CUE_NOTE_MS: 800,
+    SHOW_SECRETS: true,     // PILOT ONLY: red debug line naming how each pair differs
+    SAVE_URL: null
+  };
+
+  const COL = {
+    note: "#2f6fd0",         // the sounding note: marker and rubber band
+    noteLast: "#b7cbee",     // the last note, once released
+    marker: "#d6d2c8",
+    markerHover: "#a39e92",
+    hoverBand: "#a39e92"     // thin line from the cursor to the region it is over
+  };
+
+  const NAMES = ["A3", "A#3", "B3", "C4", "C#4", "D4", "D#4", "E4", "F4", "F#4", "G4", "G#4", "A4"];
+  const N_KEYS = NAMES.length;     // key i plays i semitones above A3
+  const REDUCED_MOTION = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- the stimuli (semitones above A3; A major) ----------
+     Each pair differs at one of three levels:
+       contour      the other sound is the target reversed
+       in_key       one note differs; both versions in key
+       out_of_key   one note differs; exactly one version has an
+                    out-of-key note
+     The distinguishing notes are never the first note, which is always
+     played on equal regions.
+
+     model_favors: which version's distinguishing note(s) the melodic
+     model makes easy at high assistance. secret: the pilot-only debug
+     line. "share" lists how much of its
+     side of the strip each next note gets at alpha 0.3 / 0.6
+     (1.00 = the whole side); at alpha 1 anything below 1.00 is
+     unreachable. Computed from TRIGRAM below. */
+  const STIMULI = [
+    {
+      id: "contour_up", secret: "same notes, opposite direction",
+      level: "contour", model_favors: "both",
+      target: [2, 4, 5, 7],      // B3 C#4 D4 E4    .32 .49 .49 / .87 .97 .97
+      other: [7, 5, 4, 2]        // E4 D4 C#4 B3    .34 .55 .63 / .77 .97 .99
+    },
+    {
+      id: "contour_down", secret: "same notes, opposite direction",
+      level: "contour", model_favors: "both",
+      target: [12, 11, 9, 7],    // A4 G#4 F#4 E4   .22 .46 .52 / .61 .97 .97
+      other: [7, 9, 11, 12]      // E4 F#4 G#4 A4   .33 .47 1.0 / .68 .70 1.0
+    },
+    {
+      id: "inkey_step", secret: "both in key, differ by one note",
+      level: "in_key", model_favors: "target",
+      target: [5, 7, 9, 7],      // D4 E4 F#4 E4    .37 .49 .42 / .89 .92 .92
+      other: [5, 7, 11, 7]       // D4 E4 G#4 E4    .37 .08 .30 / .89 .00 .64
+    },
+    {
+      id: "inkey_leap", secret: "both in key, differ by one note",
+      level: "in_key", model_favors: "other",
+      target: [9, 7, 4, 7],      // F#4 E4 C#4 E4   .36 .13 .23 / .92 .02 .26
+      other: [9, 7, 5, 7]        // F#4 E4 D4 E4    .36 .43 .39 / .92 .91 .87
+    },
+    {
+      id: "oot_target_in_1", secret: "differ by one note, one is out of key",
+      level: "out_of_key", model_favors: "target",
+      target: [4, 5, 7, 9],      // C#4 D4 E4 F#4   .34 .49 .49 / .81 .97 .92
+      other: [4, 6, 7, 9]        // C#4 D#4 E4 F#4  .09 .52 .43 / .01 .96 .87
+    },
+    {
+      id: "oot_target_in_2", secret: "differ by one note, one is out of key",
+      level: "out_of_key", model_favors: "target",
+      target: [11, 9, 7, 5],     // G#4 F#4 E4 D4   .33 .52 .43 / .88 .97 .91
+      other: [11, 10, 7, 5]      // G#4 G4 E4 D4    .09 .17 .29 / .01 .05 .32
+    },
+    {
+      id: "oot_target_out_1", secret: "differ by one note, one is out of key",
+      level: "out_of_key", model_favors: "other",
+      target: [5, 3, 2, 0],      // D4 C4 B3 A3     .14 .60 .77 / .01 .92 .99
+      other: [5, 4, 2, 0]        // D4 C#4 B3 A3    .46 .63 .79 / .90 .99 .99
+    },
+    {
+      id: "oot_target_out_2", secret: "differ by one note, one is out of key",
+      level: "out_of_key", model_favors: "other",
+      target: [9, 8, 5, 4],      // F#4 F4 D4 C#4   .11 .18 .26 / .01 .05 .20
+      other: [9, 7, 5, 4]        // F#4 E4 D4 C#4   .36 .43 .55 / .92 .91 .97
+    }
+  ];
+
+  /* ============================================================
+     MELODIC MODEL
+
+     Chromatic, key-aligned trigram from the music21 corpus: Bach
+     chorales plus the top line of Beethoven, Mozart and Haydn string
+     quartets (built by build_trigram.py; ~43k transitions). Each
+     phrase was assigned its local key (Krumhansl-Schmuckler over all
+     parts) and only major-key phrases kept, with pitch classes taken
+     relative to the tonic: the same as transposing them to A major,
+     this instrument's key. Repeated notes were merged, so repeats are
+     not modelled here; the repeat band has a fixed size instead.
+
+       TRIGRAM[pc][ctx][step]
+         pc    pitch class of the last note above the tonic, 0..11
+               (0 = A here)
+         ctx   0 = no incoming interval yet (bigram); otherwise
+               1 + index of the incoming interval in STEPS
+         step  index in STEPS of the next interval, in semitones
+     ============================================================ */
+  const STEPS = [-12, -11, -10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  const stepIdx = s => (s < 0 ? s + 12 : s + 11);
+  const TRIGRAM = [
+    [ // pitch class 0 above the tonic
+      [0.0237, 0.000432, 0.00403, 0.00375, 0.0119, 0.0117, 0.00216, 0.0638, 0.00664, 0.0514, 0.106, 0.23, 0.0261, 0.23, 0.00737, 0.0823, 0.0502, 0.00245, 0.0345, 0.00187, 0.0151, 0.00489, 0.00187, 0.0278],
+      [0.000873, 1.59e-05, 0.000148, 0.000138, 0.000439, 0.000429, 7.95e-05, 0.0097, 0.0076, 0.0166, 0.0112, 0.0893, 0.0524, 0.111, 0.00762, 0.0913, 0.0313, 9.01e-05, 0.0895, 6.89e-05, 0.0153, 0.0296, 0.00742, 0.427],
+      [0.00625, 0.000114, 0.00106, 0.000986, 0.00314, 0.00307, 0.000569, 0.0168, 0.00175, 0.0135, 0.0279, 0.0605, 0.00688, 0.0605, 0.00194, 0.127, 0.0132, 0.000645, 0.00909, 0.000493, 0.162, 0.00129, 0.000492, 0.481],
+      [0.00339, 6.17e-05, 0.000576, 0.000535, 0.00171, 0.00167, 0.000309, 0.0377, 0.000948, 0.00734, 0.0151, 0.0328, 0.00373, 0.0614, 0.00105, 0.126, 0.0643, 0.00035, 0.262, 0.086, 0.0879, 0.0578, 0.000267, 0.147],
+      [0.02, 3.86e-05, 0.00036, 0.000334, 0.00107, 0.00104, 0.000193, 0.0235, 0.000593, 0.00459, 0.0273, 0.235, 0.00233, 0.11, 0.000658, 0.15, 0.112, 0.000219, 0.0567, 0.000167, 0.0549, 0.0362, 0.0895, 0.0739],
+      [0.173, 0.00012, 0.00112, 0.00104, 0.0589, 0.00324, 0.0006, 0.0177, 0.00184, 0.0143, 0.085, 0.175, 0.0628, 0.0639, 0.00205, 0.0229, 0.125, 0.00068, 0.121, 0.000521, 0.0042, 0.0569, 0.00052, 0.00772],
+      [0.00598, 1.16e-05, 0.000108, 0.0001, 0.000319, 0.00566, 5.78e-05, 0.00705, 0.000177, 0.0388, 0.0456, 0.124, 0.0221, 0.145, 0.0269, 0.163, 0.167, 6.55e-05, 0.0972, 0.0054, 0.086, 0.0269, 5e-05, 0.0328],
+      [0.017, 0.000309, 0.00288, 0.00268, 0.00853, 0.00833, 0.00154, 0.0455, 0.00474, 0.0367, 0.0757, 0.307, 0.0187, 0.164, 0.00526, 0.0588, 0.0359, 0.00175, 0.0247, 0.00134, 0.154, 0.0035, 0.00134, 0.0198],
+      [0.000965, 1.76e-05, 0.000164, 0.000152, 0.000486, 0.000474, 8.79e-05, 0.0107, 0.0247, 0.124, 0.045, 0.0663, 0.0336, 0.148, 0.0328, 0.0765, 0.238, 9.96e-05, 0.0746, 0.0163, 0.0738, 0.0246, 7.61e-05, 0.00926],
+      [0.00234, 4.51e-06, 0.00213, 3.91e-05, 0.000125, 0.00638, 2.26e-05, 0.0863, 0.0105, 0.0569, 0.0616, 0.155, 0.0149, 0.234, 7.69e-05, 0.134, 0.0882, 2.56e-05, 0.086, 1.96e-05, 0.0336, 0.00214, 1.95e-05, 0.0253],
+      [0.00312, 5.69e-05, 0.00053, 0.000493, 0.00157, 0.00153, 0.000284, 0.0873, 0.0535, 0.0594, 0.0929, 0.267, 0.0824, 0.162, 0.0273, 0.0108, 0.0592, 0.000322, 0.0572, 0.000247, 0.0283, 0.000644, 0.000246, 0.00365],
+      [0.0061, 1.3e-06, 0.000615, 1.13e-05, 0.00486, 0.00365, 0.000609, 0.0291, 0.00243, 0.0273, 0.142, 0.428, 0.0055, 0.192, 0.00484, 0.0485, 0.0327, 0.00483, 0.0278, 0.00242, 0.0115, 0.00243, 0.00362, 0.0194],
+      [0.000981, 1.79e-05, 0.000167, 0.000155, 0.000494, 0.017, 8.93e-05, 0.0109, 0.0168, 0.00212, 0.294, 0.2, 0.175, 0.0922, 0.0334, 0.0613, 0.0517, 0.00837, 0.018, 7.75e-05, 0.0172, 0.000202, 7.73e-05, 0.00115],
+      [0.0196, 0.000699, 0.00211, 0.0028, 0.0224, 0.00702, 0.0028, 0.0805, 0.00421, 0.049, 0.0241, 0.221, 0.0427, 0.387, 0.00491, 0.0694, 0.0162, 0.0014, 0.0197, 6.54e-06, 0.00633, 0.00141, 0.000704, 0.0141],
+      [0.00901, 6.25e-06, 5.83e-05, 0.00294, 0.000173, 0.0233, 3.12e-05, 0.114, 0.0203, 0.099, 0.392, 0.0236, 0.0495, 0.209, 0.0146, 0.0301, 0.000726, 3.54e-05, 0.00917, 2.71e-05, 0.000218, 7.07e-05, 2.7e-05, 0.00329],
+      [0.0108, 7.5e-06, 0.014, 6.5e-05, 0.0176, 0.0419, 0.0139, 0.0706, 0.000115, 0.154, 0.231, 0.0943, 0.0074, 0.0873, 0.0105, 0.057, 0.157, 0.0105, 0.011, 3.26e-05, 0.00721, 8.5e-05, 3.25e-05, 0.00395],
+      [0.0302, 5.84e-05, 0.0276, 0.0275, 0.0286, 0.0286, 0.000292, 0.144, 0.000897, 0.00695, 0.122, 0.0851, 0.0576, 0.0311, 0.000996, 0.0652, 0.277, 0.000331, 0.0317, 0.000253, 0.00204, 0.000661, 0.000253, 0.0308],
+      [0.0289, 3.45e-06, 0.00482, 0.00802, 0.0257, 0.0352, 0.00161, 0.138, 0.00325, 0.0483, 0.0759, 0.182, 0.005, 0.189, 0.00485, 0.21, 0.0228, 1.96e-05, 0.00986, 1.5e-05, 0.00172, 3.91e-05, 1.49e-05, 0.00501],
+      [0.00913, 0.000166, 0.00155, 0.00144, 0.00459, 0.00449, 0.0778, 0.0245, 0.00255, 0.0967, 0.0407, 0.319, 0.087, 0.0885, 0.00283, 0.0317, 0.0193, 0.0779, 0.0133, 0.000721, 0.00581, 0.00188, 0.00072, 0.0876],
+      [0.0816, 2.88e-05, 0.000269, 0.00025, 0.0275, 0.0408, 0.000144, 0.0843, 0.0138, 0.11, 0.167, 0.122, 0.00174, 0.229, 0.0138, 0.0455, 0.0167, 0.000163, 0.0023, 0.0268, 0.0143, 0.000326, 0.000125, 0.00185],
+      [0.0103, 0.00919, 0.0828, 0.000172, 0.0464, 0.0372, 0.0184, 0.205, 0.00948, 0.0849, 0.0874, 0.231, 0.0104, 0.0748, 0.000338, 0.068, 0.0023, 0.000112, 0.0108, 8.6e-05, 0.000693, 0.000225, 8.58e-05, 0.0104],
+      [0.00594, 0.000108, 0.00101, 0.701, 0.00299, 0.00292, 0.00054, 0.0159, 0.00166, 0.0629, 0.0265, 0.0575, 0.00654, 0.0575, 0.00184, 0.0206, 0.0126, 0.000612, 0.00864, 0.000469, 0.00378, 0.00122, 0.000468, 0.00694],
+      [0.00594, 0.000108, 0.101, 0.000936, 0.053, 0.00292, 0.00054, 0.0659, 0.00166, 0.0129, 0.126, 0.307, 0.00654, 0.258, 0.00184, 0.0206, 0.0126, 0.000612, 0.00864, 0.000469, 0.00378, 0.00122, 0.000468, 0.00694],
+      [0.16, 0.000309, 0.00288, 0.00268, 0.151, 0.00833, 0.00154, 0.0455, 0.00474, 0.0367, 0.0757, 0.164, 0.0187, 0.164, 0.00526, 0.0588, 0.0359, 0.00175, 0.0247, 0.00134, 0.0108, 0.0035, 0.00134, 0.0198],
+      [0.362, 0.00604, 0.00615, 0.000113, 0.0245, 0.0124, 6.51e-05, 0.0501, 0.0002, 0.0377, 0.118, 0.224, 0.0249, 0.0551, 0.000222, 0.0507, 0.0136, 7.38e-05, 0.00706, 5.65e-05, 0.000455, 0.00617, 5.64e-05, 0.000837]
+    ],
+    [ // pitch class 1 above the tonic
+      [7.05e-05, 6.45e-06, 3.14e-05, 0.0189, 0.0103, 0.00525, 0.0155, 0.0105, 0.0088, 0.0691, 0.0518, 0.231, 0.454, 0.0221, 0.0295, 0.0105, 0.000308, 0.0138, 0.00525, 0.00348, 0.0327, 2.93e-05, 0.00344, 0.00351],
+      [7.05e-05, 6.45e-06, 3.14e-05, 0.0189, 0.0103, 0.00525, 0.0155, 0.0105, 0.0088, 0.0691, 0.0518, 0.231, 0.454, 0.0221, 0.0295, 0.0105, 0.000308, 0.0138, 0.00525, 0.00348, 0.0327, 2.93e-05, 0.00344, 0.00351],
+      [4.41e-05, 4.03e-06, 1.96e-05, 0.0118, 0.00646, 0.00328, 0.00967, 0.00654, 0.0055, 0.0432, 0.0324, 0.144, 0.409, 0.0138, 0.0185, 0.00657, 0.000193, 0.0086, 0.00328, 0.00218, 0.0204, 1.83e-05, 0.252, 0.0022],
+      [5.88e-05, 5.37e-06, 2.62e-05, 0.0158, 0.00861, 0.00438, 0.0129, 0.00872, 0.00733, 0.0576, 0.0432, 0.193, 0.545, 0.0184, 0.0246, 0.00876, 0.000257, 0.0115, 0.00437, 0.0029, 0.0272, 2.44e-05, 0.00286, 0.00293],
+      [1.6e-05, 1.46e-06, 7.14e-06, 0.232, 0.00235, 0.00119, 0.00352, 0.00238, 0.002, 0.0157, 0.0118, 0.143, 0.194, 0.0505, 0.00671, 0.00239, 7e-05, 0.00313, 0.00119, 0.000792, 0.326, 6.65e-06, 0.000781, 0.000799],
+      [3.2e-05, 2.93e-06, 1.43e-05, 0.0086, 0.0047, 0.00239, 0.00703, 0.00476, 0.004, 0.0314, 0.0236, 0.105, 0.661, 0.01, 0.104, 0.00478, 0.00014, 0.00626, 0.00239, 0.00158, 0.0148, 1.33e-05, 0.00156, 0.0016],
+      [7.05e-05, 6.45e-06, 3.14e-05, 0.0189, 0.0103, 0.00525, 0.0155, 0.0105, 0.0088, 0.0691, 0.0518, 0.231, 0.454, 0.0221, 0.0295, 0.0105, 0.000308, 0.0138, 0.00525, 0.00348, 0.0327, 2.93e-05, 0.00344, 0.00351],
+      [4.41e-05, 4.03e-06, 1.96e-05, 0.0118, 0.00646, 0.00328, 0.00967, 0.00654, 0.0055, 0.0432, 0.0324, 0.269, 0.409, 0.0138, 0.0185, 0.132, 0.000193, 0.0086, 0.00328, 0.00218, 0.0204, 1.83e-05, 0.00215, 0.0022],
+      [5.04e-05, 4.6e-06, 2.25e-05, 0.0135, 0.00738, 0.00375, 0.0111, 0.00747, 0.00628, 0.192, 0.037, 0.165, 0.467, 0.0158, 0.0211, 0.00751, 0.00022, 0.00983, 0.00375, 0.00249, 0.0233, 2.09e-05, 0.00245, 0.00251],
+      [2.35e-05, 2.15e-06, 1.05e-05, 0.00631, 0.00344, 0.00175, 0.00516, 0.0702, 0.00293, 0.023, 0.151, 0.077, 0.551, 0.00736, 0.00984, 0.0035, 0.000103, 0.00459, 0.0684, 0.00116, 0.0109, 9.75e-06, 0.00115, 0.00117],
+      [8.2e-06, 7.49e-07, 3.66e-06, 0.0022, 0.0012, 0.000611, 0.0018, 0.00122, 0.0243, 0.264, 0.00603, 0.236, 0.355, 0.00257, 0.00343, 0.00122, 3.58e-05, 0.0714, 0.00061, 0.000405, 0.0038, 3.4e-06, 0.0004, 0.0237],
+      [8.6e-06, 7.86e-07, 3.83e-06, 0.00231, 0.05, 0.00064, 0.00189, 0.00128, 0.00107, 0.13, 0.104, 0.589, 0.0798, 0.00269, 0.0036, 0.0257, 3.76e-05, 0.00168, 0.00064, 0.000425, 0.00398, 3.57e-06, 0.000419, 0.000428],
+      [2.1e-06, 1.92e-07, 9.36e-07, 0.000563, 0.000307, 0.000156, 0.0183, 0.000311, 0.00621, 0.00206, 0.127, 0.0604, 0.71, 0.000657, 0.0485, 0.00627, 9.17e-06, 0.0123, 0.000156, 0.000104, 0.00692, 8.71e-07, 0.000102, 0.000105],
+      [1.96e-06, 1.79e-07, 8.73e-07, 0.00608, 0.0114, 0.0113, 0.0338, 0.00585, 0.000244, 0.0575, 0.00144, 0.323, 0.413, 0.0562, 0.0119, 0.00585, 8.56e-06, 0.0115, 0.0113, 0.00565, 0.0342, 8.13e-07, 9.55e-05, 9.76e-05],
+      [1.1e-05, 1.01e-06, 4.91e-06, 0.00296, 0.00161, 0.000821, 0.00242, 0.0329, 0.0639, 0.042, 0.0081, 0.0674, 0.727, 0.0347, 0.00461, 0.00164, 4.81e-05, 0.00215, 0.00082, 0.000544, 0.0051, 4.57e-06, 0.000537, 0.000549],
+      [1.36e-05, 1.24e-06, 6.04e-06, 0.0421, 0.0789, 0.00101, 0.00298, 0.00201, 0.00169, 0.167, 0.0484, 0.275, 0.0873, 0.00425, 0.198, 0.0405, 5.92e-05, 0.0411, 0.00101, 0.00067, 0.00628, 5.63e-06, 0.000661, 0.000676],
+      [1.96e-05, 1.79e-06, 8.73e-06, 0.00526, 0.00287, 0.00146, 0.0043, 0.00291, 0.00244, 0.0192, 0.0144, 0.0642, 0.848, 0.00613, 0.0082, 0.00292, 8.56e-05, 0.00382, 0.00146, 0.000967, 0.00907, 8.13e-06, 0.000955, 0.000976],
+      [5.88e-05, 5.37e-06, 2.62e-05, 0.0158, 0.00861, 0.00438, 0.0129, 0.175, 0.00733, 0.0576, 0.0432, 0.193, 0.378, 0.0184, 0.0246, 0.00876, 0.000257, 0.0115, 0.00437, 0.0029, 0.0272, 2.44e-05, 0.00286, 0.00293],
+      [3.2e-05, 2.93e-06, 1.43e-05, 0.0086, 0.0047, 0.00239, 0.00703, 0.00476, 0.004, 0.213, 0.0236, 0.287, 0.388, 0.01, 0.0134, 0.00478, 0.00014, 0.00626, 0.00239, 0.00158, 0.0148, 1.33e-05, 0.00156, 0.0016],
+      [7.05e-05, 6.45e-06, 3.14e-05, 0.0189, 0.0103, 0.00525, 0.0155, 0.0105, 0.0088, 0.0691, 0.0518, 0.231, 0.454, 0.0221, 0.0295, 0.0105, 0.000308, 0.0138, 0.00525, 0.00348, 0.0327, 2.93e-05, 0.00344, 0.00351],
+      [3.92e-05, 3.58e-06, 1.75e-05, 0.0105, 0.00574, 0.00292, 0.0086, 0.00581, 0.00489, 0.0384, 0.14, 0.462, 0.252, 0.0123, 0.0164, 0.00584, 0.000171, 0.00765, 0.00292, 0.00193, 0.0181, 1.63e-05, 0.00191, 0.00195],
+      [1.96e-05, 1.79e-06, 8.73e-06, 0.227, 0.00287, 0.057, 0.0043, 0.00291, 0.00244, 0.13, 0.0144, 0.12, 0.126, 0.00613, 0.0082, 0.00292, 8.56e-05, 0.00382, 0.00146, 0.000967, 0.287, 8.13e-06, 0.000955, 0.000976],
+      [7.05e-05, 6.45e-06, 3.14e-05, 0.0189, 0.0103, 0.00525, 0.0155, 0.0105, 0.0088, 0.0691, 0.0518, 0.231, 0.454, 0.0221, 0.0295, 0.0105, 0.000308, 0.0138, 0.00525, 0.00348, 0.0327, 2.93e-05, 0.00344, 0.00351],
+      [7.05e-05, 6.45e-06, 3.14e-05, 0.0189, 0.0103, 0.00525, 0.0155, 0.0105, 0.0088, 0.0691, 0.0518, 0.231, 0.454, 0.0221, 0.0295, 0.0105, 0.000308, 0.0138, 0.00525, 0.00348, 0.0327, 2.93e-05, 0.00344, 0.00351],
+      [5.04e-05, 4.6e-06, 2.25e-05, 0.0135, 0.00738, 0.00375, 0.0111, 0.00747, 0.00628, 0.192, 0.037, 0.308, 0.324, 0.0158, 0.0211, 0.00751, 0.00022, 0.00983, 0.00375, 0.00249, 0.0233, 2.09e-05, 0.00245, 0.00251]
+    ],
+    [ // pitch class 2 above the tonic
+      [0.00334, 6.6e-07, 0.00194, 0.0044, 0.00141, 0.0179, 0.00176, 0.00599, 0.00705, 0.0522, 0.433, 0.0293, 0.0259, 0.301, 0.0503, 0.00336, 0.0339, 0.00176, 0.0105, 0.00141, 0.00686, 0.00404, 5.99e-07, 0.00282],
+      [0.000796, 1.57e-07, 0.000461, 0.00105, 0.000335, 0.00427, 0.000419, 0.00143, 0.00168, 0.0124, 0.198, 0.0546, 0.00618, 0.167, 0.0596, 0.0008, 0.103, 0.000419, 0.193, 0.000336, 0.0493, 0.000962, 1.43e-07, 0.144],
+      [0.00334, 6.6e-07, 0.00194, 0.0044, 0.00141, 0.0179, 0.00176, 0.00599, 0.00705, 0.0522, 0.433, 0.0293, 0.0259, 0.301, 0.0503, 0.00336, 0.0339, 0.00176, 0.0105, 0.00141, 0.00686, 0.00404, 5.99e-07, 0.00282],
+      [0.000557, 1.1e-07, 0.000323, 0.000733, 0.000235, 0.00299, 0.000293, 0.0343, 0.00117, 0.0087, 0.172, 0.00488, 0.0377, 0.15, 0.00838, 0.00056, 0.106, 0.000293, 0.135, 0.000235, 0.268, 0.000674, 9.98e-08, 0.0671],
+      [0.000929, 1.83e-07, 0.000538, 0.00122, 0.000391, 0.00498, 0.000489, 0.00166, 0.00196, 0.0145, 0.176, 0.00813, 0.00721, 0.139, 0.403, 0.000933, 0.00942, 0.000489, 0.00293, 0.000392, 0.0575, 0.112, 1.66e-07, 0.0563],
+      [0.00139, 2.75e-07, 0.000806, 0.00183, 0.000587, 0.0908, 0.000733, 0.0025, 0.00294, 0.0218, 0.18, 0.0122, 0.0108, 0.375, 0.0209, 0.0014, 0.0975, 0.000734, 0.00439, 0.0839, 0.00286, 0.00168, 2.5e-07, 0.0845],
+      [0.000274, 5.41e-08, 0.000159, 0.00036, 0.0165, 0.0179, 0.000144, 0.0169, 0.000578, 0.00428, 0.0683, 0.0024, 0.0185, 0.385, 0.0861, 0.0331, 0.249, 0.000144, 0.0173, 0.000116, 0.000562, 0.0659, 4.91e-08, 0.0166],
+      [0.00139, 2.75e-07, 0.000806, 0.00183, 0.000587, 0.00747, 0.000733, 0.0025, 0.00294, 0.0218, 0.18, 0.0122, 0.0108, 0.125, 0.354, 0.0014, 0.0975, 0.167, 0.00439, 0.000588, 0.00286, 0.00168, 2.5e-07, 0.00117],
+      [0.000151, 2.97e-08, 8.72e-05, 0.000198, 6.35e-05, 0.0188, 7.93e-05, 0.00027, 0.000317, 0.0384, 0.164, 0.00132, 0.1, 0.293, 0.0653, 0.000151, 0.218, 7.93e-05, 0.0275, 0.0361, 0.0273, 0.00919, 2.7e-08, 0.000127],
+      [0.00076, 1.5e-07, 0.00044, 0.000999, 0.00032, 0.00407, 0.0004, 0.00136, 0.0016, 0.0573, 0.28, 0.0976, 0.0059, 0.159, 0.0114, 0.0462, 0.19, 0.0004, 0.0933, 0.000321, 0.047, 0.000919, 1.36e-07, 0.000641],
+      [3.3e-05, 6.52e-09, 1.91e-05, 4.34e-05, 1.39e-05, 0.0278, 1.74e-05, 0.00599, 0.00402, 0.172, 0.358, 0.0141, 0.02, 0.23, 0.0598, 0.00399, 0.0596, 0.0119, 0.0199, 0.00199, 0.006, 0.00202, 5.92e-09, 0.002],
+      [0.00237, 1.56e-09, 0.000477, 0.000483, 3.33e-06, 0.00524, 0.00237, 0.00568, 0.000489, 0.00957, 0.636, 0.0294, 0.000534, 0.215, 0.0474, 0.000953, 0.0237, 0.000477, 0.0133, 3.33e-06, 0.00238, 0.00237, 1.41e-09, 0.0019],
+      [0.00466, 1.51e-08, 4.44e-05, 0.00469, 0.0138, 0.0142, 4.04e-05, 0.00472, 0.0277, 0.0104, 0.661, 0.0374, 0.0786, 0.039, 0.0424, 0.00925, 0.0191, 0.00463, 0.00942, 0.00462, 0.000157, 0.00468, 1.37e-08, 0.00924],
+      [0.00397, 1.29e-08, 0.00394, 0.0196, 0.00393, 0.00816, 3.44e-05, 0.0196, 0.0236, 0.0362, 0.0788, 0.18, 0.106, 0.346, 0.0986, 0.00788, 0.0358, 3.44e-05, 0.00802, 2.75e-05, 0.00404, 0.0118, 1.17e-08, 0.00396],
+      [0.00191, 2.09e-09, 0.00127, 0.00572, 4.46e-06, 0.021, 5.58e-06, 0.00445, 0.00889, 0.054, 0.276, 0.00263, 0.0362, 0.557, 0.0211, 0.00191, 0.00581, 5.58e-06, 3.34e-05, 4.47e-06, 0.000655, 0.000647, 1.9e-09, 8.93e-06],
+      [7.78e-05, 1.53e-08, 0.00935, 0.00475, 3.28e-05, 0.00972, 0.0186, 0.000139, 0.000164, 0.183, 0.447, 0.0193, 0.00991, 0.0256, 0.155, 0.014, 0.103, 4.09e-05, 0.000245, 3.28e-05, 0.000159, 9.4e-05, 1.39e-08, 6.55e-05],
+      [0.000539, 1.06e-07, 0.000312, 0.000709, 0.000227, 0.00289, 0.000284, 0.000966, 0.13, 0.00842, 0.554, 0.00472, 0.0687, 0.0808, 0.0726, 0.000542, 0.07, 0.000284, 0.0017, 0.000227, 0.00111, 0.000652, 9.66e-08, 0.000455],
+      [0.0126, 4.07e-08, 0.0125, 0.000271, 0.0124, 0.0381, 0.000109, 0.00037, 0.0128, 0.127, 0.57, 0.0142, 0.0139, 0.105, 0.0648, 0.000207, 0.0144, 0.000109, 0.000651, 8.71e-05, 0.000423, 0.00025, 3.7e-08, 0.000174],
+      [0.00186, 3.67e-07, 0.00108, 0.00244, 0.000783, 0.00996, 0.000978, 0.00333, 0.00392, 0.251, 0.463, 0.0163, 0.0144, 0.167, 0.0279, 0.00187, 0.0188, 0.000978, 0.00586, 0.000784, 0.00381, 0.00225, 3.33e-07, 0.00157],
+      [0.012, 3.88e-08, 0.0236, 0.012, 8.29e-05, 0.166, 0.000104, 0.000352, 0.0122, 0.144, 0.367, 0.037, 0.00153, 0.124, 0.0383, 0.012, 0.0138, 0.000104, 0.0124, 0.0118, 0.0122, 0.000238, 3.52e-08, 0.000166],
+      [0.00111, 2.2e-07, 0.000645, 0.0681, 0.0671, 0.0726, 0.000587, 0.002, 0.00235, 0.0174, 0.344, 0.21, 0.00865, 0.1, 0.0168, 0.00112, 0.0113, 0.000587, 0.00352, 0.00047, 0.00229, 0.068, 2e-07, 0.000939],
+      [0.0318, 1.03e-07, 0.0628, 0.0632, 0.00022, 0.0028, 0.000275, 0.000936, 0.0636, 0.289, 0.255, 0.00458, 0.00405, 0.0783, 0.133, 0.000525, 0.0053, 0.000275, 0.00165, 0.00022, 0.00107, 0.000632, 9.36e-08, 0.00044],
+      [0.144, 1.57e-07, 0.000461, 0.00105, 0.000335, 0.00427, 0.000419, 0.00143, 0.00168, 0.0124, 0.627, 0.102, 0.00618, 0.0717, 0.012, 0.0008, 0.00808, 0.000419, 0.00251, 0.000336, 0.00163, 0.000962, 1.43e-07, 0.000671],
+      [0.00334, 6.6e-07, 0.00194, 0.0044, 0.00141, 0.0179, 0.00176, 0.00599, 0.00705, 0.0522, 0.433, 0.0293, 0.0259, 0.301, 0.0503, 0.00336, 0.0339, 0.00176, 0.0105, 0.00141, 0.00686, 0.00404, 5.99e-07, 0.00282],
+      [0.0484, 1.57e-07, 0.000461, 0.0487, 0.048, 0.0995, 0.000419, 0.049, 0.0493, 0.06, 0.294, 0.102, 0.00618, 0.119, 0.012, 0.0008, 0.0557, 0.000419, 0.00251, 0.000336, 0.00163, 0.000962, 1.43e-07, 0.000671]
+    ],
+    [ // pitch class 3 above the tonic
+      [0.00515, 0.0017, 3.1e-05, 0.0254, 0.00681, 0.000105, 0.0085, 0.00694, 0.00699, 0.058, 0.063, 0.375, 0.223, 0.117, 0.019, 0.0391, 0.00369, 0.00174, 0.00349, 0.00174, 0.0271, 2.89e-05, 5.77e-06, 0.00685],
+      [0.147, 0.00121, 2.21e-05, 0.0182, 0.00486, 7.48e-05, 0.00607, 0.00495, 0.00499, 0.0414, 0.045, 0.268, 0.159, 0.0832, 0.0136, 0.028, 0.00263, 0.00124, 0.00249, 0.00125, 0.0194, 2.06e-05, 4.12e-06, 0.148],
+      [0.00515, 0.0017, 3.1e-05, 0.0254, 0.00681, 0.000105, 0.0085, 0.00694, 0.00699, 0.058, 0.063, 0.375, 0.223, 0.117, 0.019, 0.0391, 0.00369, 0.00174, 0.00349, 0.00174, 0.0271, 2.89e-05, 5.77e-06, 0.00685],
+      [0.00515, 0.0017, 3.1e-05, 0.0254, 0.00681, 0.000105, 0.0085, 0.00694, 0.00699, 0.058, 0.063, 0.375, 0.223, 0.117, 0.019, 0.0391, 0.00369, 0.00174, 0.00349, 0.00174, 0.0271, 2.89e-05, 5.77e-06, 0.00685],
+      [0.000887, 0.000293, 5.35e-06, 0.246, 0.00117, 1.81e-05, 0.00147, 0.0012, 0.0012, 0.01, 0.0453, 0.0992, 0.0384, 0.0201, 0.00327, 0.248, 0.000636, 0.000299, 0.000601, 0.000301, 0.281, 4.98e-06, 9.95e-07, 0.00118],
+      [0.00515, 0.0017, 3.1e-05, 0.0254, 0.00681, 0.000105, 0.0085, 0.00694, 0.00699, 0.058, 0.063, 0.375, 0.223, 0.117, 0.019, 0.0391, 0.00369, 0.00174, 0.00349, 0.00174, 0.0271, 2.89e-05, 5.77e-06, 0.00685],
+      [0.00429, 0.00142, 2.58e-05, 0.0212, 0.00567, 8.73e-05, 0.00708, 0.00578, 0.00582, 0.0483, 0.0525, 0.313, 0.186, 0.264, 0.0158, 0.0326, 0.00307, 0.00145, 0.0029, 0.00145, 0.0226, 2.4e-05, 4.81e-06, 0.00571],
+      [0.00322, 0.00106, 1.94e-05, 0.0159, 0.00425, 6.55e-05, 0.00531, 0.00433, 0.00437, 0.161, 0.0394, 0.359, 0.264, 0.0728, 0.0119, 0.0245, 0.00231, 0.00108, 0.00218, 0.00109, 0.017, 1.8e-05, 3.61e-06, 0.00428],
+      [0.00515, 0.0017, 3.1e-05, 0.0254, 0.00681, 0.000105, 0.0085, 0.00694, 0.00699, 0.058, 0.063, 0.375, 0.223, 0.117, 0.019, 0.0391, 0.00369, 0.00174, 0.00349, 0.00174, 0.0271, 2.89e-05, 5.77e-06, 0.00685],
+      [0.000887, 0.000293, 5.35e-06, 0.00439, 0.00117, 1.81e-05, 0.00147, 0.0012, 0.0012, 0.217, 0.0109, 0.272, 0.314, 0.124, 0.00327, 0.0412, 0.000636, 0.000299, 0.000601, 0.000301, 0.00468, 4.98e-06, 9.95e-07, 0.00118],
+      [0.00234, 0.000772, 1.41e-05, 0.0116, 0.00309, 4.76e-05, 0.00386, 0.00315, 0.00318, 0.208, 0.0286, 0.443, 0.192, 0.053, 0.00863, 0.0178, 0.00168, 0.000789, 0.00158, 0.000793, 0.0123, 1.31e-05, 2.62e-06, 0.00311],
+      [0.000161, 5.31e-05, 9.69e-07, 0.000795, 0.00646, 3.27e-06, 0.000266, 0.000217, 0.00647, 0.00806, 0.114, 0.58, 0.107, 0.11, 0.000593, 0.0325, 0.000115, 5.42e-05, 0.0126, 5.45e-05, 0.0071, 9.02e-07, 1.8e-07, 0.0127],
+      [0.000277, 9.13e-05, 1.67e-06, 0.00137, 0.0111, 5.63e-06, 0.000457, 0.0111, 0.0111, 0.0139, 0.0464, 0.138, 0.711, 0.017, 0.00102, 0.0129, 0.000198, 9.33e-05, 0.000187, 0.0108, 0.00146, 1.55e-06, 3.1e-07, 0.0111],
+      [0.000176, 0.00691, 1.06e-06, 0.00772, 0.000233, 3.59e-06, 0.0208, 0.000238, 0.0139, 0.105, 0.00216, 0.369, 0.199, 0.189, 0.0691, 0.00819, 0.00698, 5.94e-05, 0.000119, 5.97e-05, 0.00093, 9.88e-07, 1.98e-07, 0.000235],
+      [0.00151, 0.0005, 9.12e-06, 0.00748, 0.002, 3.08e-05, 0.0025, 0.0609, 0.00206, 0.0171, 0.254, 0.169, 0.0655, 0.328, 0.00558, 0.0703, 0.00108, 0.00051, 0.00103, 0.000513, 0.00799, 8.49e-06, 1.7e-06, 0.00201],
+      [0.0368, 0.000154, 2.82e-06, 0.00231, 0.037, 9.52e-06, 0.019, 0.0188, 0.000635, 0.0416, 0.133, 0.343, 0.0748, 0.12, 0.0199, 0.113, 0.0185, 0.0183, 0.000317, 0.000159, 0.00247, 2.62e-06, 5.25e-07, 0.000623],
+      [0.00429, 0.00142, 2.58e-05, 0.0212, 0.00567, 8.73e-05, 0.00708, 0.00578, 0.00582, 0.0483, 0.0525, 0.313, 0.352, 0.0971, 0.0158, 0.0326, 0.00307, 0.00145, 0.0029, 0.00145, 0.0226, 2.4e-05, 4.81e-06, 0.00571],
+      [0.00161, 0.000531, 9.69e-06, 0.00795, 0.00213, 3.27e-05, 0.0652, 0.00217, 0.00218, 0.143, 0.0197, 0.43, 0.132, 0.0989, 0.00593, 0.0747, 0.00115, 0.000542, 0.00109, 0.000545, 0.00848, 9.02e-06, 1.8e-06, 0.00214],
+      [0.00257, 0.000849, 1.55e-05, 0.0127, 0.0034, 5.24e-05, 0.00425, 0.00347, 0.00349, 0.029, 0.0315, 0.588, 0.211, 0.0583, 0.00949, 0.0196, 0.00184, 0.000868, 0.00174, 0.000872, 0.0136, 1.44e-05, 2.89e-06, 0.00343],
+      [0.00322, 0.00106, 1.94e-05, 0.0159, 0.00425, 6.55e-05, 0.00531, 0.00433, 0.00437, 0.0363, 0.289, 0.359, 0.139, 0.0728, 0.0119, 0.0245, 0.00231, 0.00108, 0.00218, 0.00109, 0.017, 1.8e-05, 3.61e-06, 0.00428],
+      [0.00368, 0.00121, 2.21e-05, 0.0182, 0.00486, 7.48e-05, 0.00607, 0.00495, 0.00499, 0.184, 0.045, 0.411, 0.159, 0.0832, 0.0136, 0.028, 0.00263, 0.00124, 0.00249, 0.00125, 0.0194, 2.06e-05, 4.12e-06, 0.00489],
+      [0.00112, 0.000369, 6.74e-06, 0.31, 0.00148, 2.28e-05, 0.00185, 0.00151, 0.00152, 0.0126, 0.0137, 0.255, 0.0484, 0.0253, 0.00413, 0.00851, 0.000802, 0.000377, 0.000758, 0.000379, 0.31, 6.27e-06, 1.25e-06, 0.00149],
+      [0.00515, 0.0017, 3.1e-05, 0.0254, 0.00681, 0.000105, 0.0085, 0.00694, 0.00699, 0.058, 0.063, 0.375, 0.223, 0.117, 0.019, 0.0391, 0.00369, 0.00174, 0.00349, 0.00174, 0.0271, 2.89e-05, 5.77e-06, 0.00685],
+      [0.00429, 0.00142, 2.58e-05, 0.0212, 0.00567, 8.73e-05, 0.00708, 0.00578, 0.00582, 0.0483, 0.0525, 0.313, 0.352, 0.0971, 0.0158, 0.0326, 0.00307, 0.00145, 0.0029, 0.00145, 0.0226, 2.4e-05, 4.81e-06, 0.00571],
+      [0.00286, 0.000944, 1.72e-05, 0.0141, 0.00378, 5.82e-05, 0.00472, 0.00385, 0.00388, 0.143, 0.035, 0.431, 0.124, 0.176, 0.0105, 0.0217, 0.00205, 0.000964, 0.00194, 0.000969, 0.0151, 1.6e-05, 3.21e-06, 0.00381]
+    ],
+    [ // pitch class 4 above the tonic
+      [0.00366, 0.000478, 0.00048, 0.0118, 0.000481, 0.00605, 0.00668, 0.00733, 0.088, 0.00656, 0.356, 0.0147, 0.317, 0.0132, 0.103, 0.00113, 0.0236, 0.00939, 0.00128, 0.0204, 0.00207, 0.00287, 0.00016, 0.00382],
+      [0.000705, 9.19e-05, 9.23e-05, 0.00226, 9.24e-05, 0.00116, 0.00129, 0.00141, 0.0169, 0.0782, 0.107, 0.0413, 0.33, 0.0795, 0.135, 0.000218, 0.00453, 0.00181, 0.0387, 0.119, 0.000399, 0.039, 3.07e-05, 0.000735],
+      [0.00366, 0.000478, 0.00048, 0.0118, 0.000481, 0.00605, 0.00668, 0.00733, 0.088, 0.00656, 0.356, 0.0147, 0.317, 0.0132, 0.103, 0.00113, 0.0236, 0.00939, 0.00128, 0.0204, 0.00207, 0.00287, 0.00016, 0.00382],
+      [0.00115, 0.000149, 0.00015, 0.00368, 0.00015, 0.00189, 0.00209, 0.00229, 0.0275, 0.00205, 0.111, 0.00461, 0.412, 0.00412, 0.0321, 0.000354, 0.00736, 0.00293, 0.000401, 0.194, 0.000648, 0.126, 4.99e-05, 0.0637],
+      [0.00115, 0.000149, 0.00015, 0.00368, 0.00015, 0.00189, 0.00209, 0.00229, 0.0275, 0.00205, 0.111, 0.00461, 0.224, 0.00412, 0.0321, 0.000354, 0.00736, 0.00293, 0.000401, 0.00636, 0.563, 0.000895, 4.99e-05, 0.0012],
+      [0.000223, 2.91e-05, 2.93e-05, 0.000718, 2.93e-05, 0.0126, 0.000407, 0.000447, 0.0298, 0.0004, 0.168, 0.0131, 0.373, 0.000804, 0.262, 6.91e-05, 0.0136, 0.000572, 7.82e-05, 0.0988, 0.000127, 0.000175, 0.0122, 0.0124],
+      [0.00131, 0.000171, 0.000171, 0.0042, 0.000172, 0.00216, 0.00239, 0.00262, 0.0314, 0.00234, 0.127, 0.00527, 0.185, 0.0761, 0.465, 0.000405, 0.00842, 0.00335, 0.000458, 0.00727, 0.000741, 0.0725, 5.7e-05, 0.00137],
+      [0.000555, 7.24e-05, 7.27e-05, 0.153, 7.28e-05, 0.000917, 0.00101, 0.00111, 0.0133, 0.000995, 0.054, 0.00223, 0.472, 0.002, 0.0762, 0.000172, 0.0339, 0.123, 0.000194, 0.0334, 0.0306, 0.000434, 2.42e-05, 0.000579],
+      [0.000346, 4.51e-05, 4.53e-05, 0.00111, 4.53e-05, 0.000571, 0.00063, 0.000692, 0.0649, 0.000619, 0.0525, 0.058, 0.502, 0.039, 0.142, 0.000107, 0.0777, 0.000886, 0.000121, 0.0208, 0.000196, 0.00027, 1.51e-05, 0.0381],
+      [0.00108, 0.00014, 0.000141, 0.00346, 0.000141, 0.00178, 0.00197, 0.00216, 0.144, 0.12, 0.105, 0.00434, 0.446, 0.00388, 0.0302, 0.000333, 0.0658, 0.00276, 0.0592, 0.00599, 0.00061, 0.000843, 4.69e-05, 0.00112],
+      [2.81e-05, 3.66e-06, 3.68e-06, 9.03e-05, 3.69e-06, 0.00465, 0.0369, 5.62e-05, 0.28, 0.0185, 0.127, 0.0155, 0.268, 0.00624, 0.145, 0.00154, 0.0278, 0.0261, 9.83e-06, 0.0385, 0.00155, 2.2e-05, 1.22e-06, 0.0031],
+      [0.000339, 4.42e-05, 4.44e-05, 0.00109, 4.45e-05, 0.00056, 0.000619, 0.000679, 0.00814, 0.000608, 0.514, 0.205, 0.0293, 0.0938, 0.0466, 0.000105, 0.00218, 0.000869, 0.000119, 0.0574, 0.000192, 0.000265, 1.48e-05, 0.0374],
+      [0.00439, 0.000439, 0.000878, 0.00222, 0.000439, 0.00089, 0.000891, 0.00528, 0.0239, 0.00571, 0.626, 0.0167, 0.181, 0.00354, 0.0625, 0.00132, 0.0259, 0.00791, 0.00088, 0.0211, 0.000881, 0.0022, 3.5e-07, 0.00483],
+      [0.00863, 2.02e-05, 2.03e-05, 0.00897, 0.00849, 0.0172, 0.000283, 0.0257, 0.0885, 0.000278, 0.0998, 0.0769, 0.369, 0.0853, 0.14, 0.00852, 0.0264, 0.00887, 0.017, 0.000863, 8.79e-05, 0.000121, 6.76e-06, 0.00864],
+      [0.00384, 1.53e-06, 1.53e-06, 0.00515, 0.00064, 0.00513, 2.13e-05, 0.00577, 0.0986, 0.00321, 0.245, 0.00132, 0.547, 0.0262, 0.0425, 3.62e-06, 0.00774, 0.00195, 0.00128, 0.0039, 6.62e-06, 9.15e-06, 5.1e-07, 0.000651],
+      [0.000833, 0.000109, 0.000109, 0.00268, 0.000109, 0.0468, 0.00152, 0.00167, 0.02, 0.0924, 0.399, 0.00335, 0.117, 0.003, 0.251, 0.000258, 0.0508, 0.00213, 0.000291, 0.00463, 0.000472, 0.000651, 3.63e-05, 0.000869],
+      [0.00186, 4.37e-06, 4.39e-06, 0.0732, 4.39e-06, 0.0238, 0.00555, 0.011, 0.11, 0.00189, 0.241, 0.00379, 0.145, 0.00012, 0.345, 1.04e-05, 0.0185, 0.0147, 1.17e-05, 0.00384, 1.9e-05, 2.62e-05, 1.46e-06, 3.5e-05],
+      [0.000416, 5.43e-05, 5.45e-05, 0.00134, 5.46e-05, 0.0461, 0.0462, 0.0236, 0.124, 0.000746, 0.45, 0.0244, 0.104, 0.0015, 0.148, 0.0229, 0.00268, 0.00107, 0.000146, 0.00231, 0.000236, 0.000326, 1.81e-05, 0.000435],
+      [0.000509, 6.63e-05, 6.67e-05, 0.0572, 6.68e-05, 0.0286, 0.168, 0.0566, 0.0122, 0.0565, 0.0495, 0.00205, 0.266, 0.00183, 0.209, 0.000157, 0.00327, 0.0846, 0.000178, 0.00283, 0.000288, 0.000398, 2.22e-05, 0.000531],
+      [0.000573, 7.46e-05, 7.5e-05, 0.00184, 7.51e-05, 0.0634, 0.00104, 0.0636, 0.0762, 0.00103, 0.149, 0.0648, 0.175, 0.00206, 0.0473, 0.0314, 0.254, 0.00147, 0.0002, 0.0657, 0.000324, 0.000448, 2.49e-05, 0.000598],
+      [0.127, 0.000299, 0.0003, 0.00736, 0.0003, 0.00378, 0.00418, 0.00458, 0.305, 0.0041, 0.223, 0.00922, 0.198, 0.00824, 0.0642, 0.000708, 0.0147, 0.00587, 0.000801, 0.0127, 0.0013, 0.00179, 9.97e-05, 0.00239],
+      [0.0105, 0.0206, 2.47e-05, 0.0831, 2.48e-05, 0.0312, 0.0519, 0.0829, 0.252, 0.000338, 0.214, 0.0111, 0.119, 0.000679, 0.0465, 5.84e-05, 0.0218, 0.052, 6.61e-05, 0.00105, 0.000107, 0.000148, 8.23e-06, 0.000197],
+      [0.00229, 0.000299, 0.0003, 0.00736, 0.0003, 0.00378, 0.00418, 0.00458, 0.055, 0.0041, 0.473, 0.00922, 0.198, 0.133, 0.0642, 0.000708, 0.0147, 0.00587, 0.000801, 0.0127, 0.0013, 0.00179, 9.97e-05, 0.00239],
+      [0.00229, 0.000299, 0.0003, 0.00736, 0.0003, 0.00378, 0.00418, 0.00458, 0.055, 0.0041, 0.348, 0.00922, 0.448, 0.00824, 0.0642, 0.000708, 0.0147, 0.00587, 0.000801, 0.0127, 0.0013, 0.00179, 9.97e-05, 0.00239],
+      [0.0424, 9.95e-05, 0.0001, 0.0441, 0.0001, 0.00126, 0.00139, 0.00153, 0.102, 0.043, 0.533, 0.0447, 0.066, 0.00275, 0.0214, 0.000236, 0.0466, 0.00196, 0.000267, 0.00424, 0.000432, 0.000597, 3.32e-05, 0.0425]
+    ],
+    [ // pitch class 5 above the tonic
+      [0.004, 0.000182, 0.0102, 0.00182, 0.00381, 0.00382, 0.00962, 0.0243, 0.00184, 0.0931, 0.0289, 0.472, 0.0126, 0.242, 0.0106, 0.0434, 0.00747, 0.00327, 0.0142, 0.000731, 0.00618, 3.09e-06, 0.000545, 0.00473],
+      [0.000833, 3.79e-05, 0.00212, 0.000379, 0.000795, 0.000796, 0.002, 0.00507, 0.000383, 0.0194, 0.00602, 0.473, 0.086, 0.134, 0.0439, 0.0507, 0.0432, 0.000681, 0.0863, 0.0418, 0.00129, 6.45e-07, 0.000114, 0.000985],
+      [0.0025, 0.000114, 0.00635, 0.00114, 0.00238, 0.00239, 0.00601, 0.0152, 0.00115, 0.0582, 0.0181, 0.295, 0.00791, 0.152, 0.0066, 0.152, 0.00467, 0.00204, 0.00885, 0.000457, 0.254, 1.93e-06, 0.000341, 0.00295],
+      [0.004, 0.000182, 0.0102, 0.00182, 0.00381, 0.00382, 0.00962, 0.0243, 0.00184, 0.0931, 0.0289, 0.472, 0.0126, 0.242, 0.0106, 0.0434, 0.00747, 0.00327, 0.0142, 0.000731, 0.00618, 3.09e-06, 0.000545, 0.00473],
+      [0.000741, 3.37e-05, 0.00188, 0.000337, 0.000706, 0.000708, 0.00178, 0.00451, 0.00034, 0.0172, 0.0424, 0.495, 0.0394, 0.193, 0.00196, 0.193, 0.00138, 0.000606, 0.00262, 0.000135, 0.00114, 5.73e-07, 0.000101, 0.000875],
+      [0.00182, 8.28e-05, 0.00462, 0.000827, 0.00173, 0.00174, 0.00437, 0.0111, 0.000835, 0.0423, 0.0131, 0.669, 0.0967, 0.11, 0.0048, 0.0197, 0.0034, 0.00149, 0.00644, 0.000332, 0.00281, 1.41e-06, 0.000248, 0.00215],
+      [0.000286, 1.3e-05, 0.000726, 0.00013, 0.000272, 0.000273, 0.000687, 0.00174, 0.000131, 0.0209, 0.0163, 0.305, 0.0295, 0.232, 0.0293, 0.0888, 0.072, 0.0288, 0.0867, 5.22e-05, 0.0433, 2.21e-07, 0.0143, 0.0289],
+      [0.00118, 5.36e-05, 0.00299, 0.000535, 0.00112, 0.00112, 0.00283, 0.00716, 0.000541, 0.204, 0.0085, 0.433, 0.00372, 0.189, 0.00311, 0.0128, 0.0022, 0.000962, 0.00417, 0.000215, 0.119, 9.1e-07, 0.00016, 0.00139],
+      [0.001, 4.55e-05, 0.00254, 0.000455, 0.000954, 0.000955, 0.00241, 0.0561, 0.00046, 0.223, 0.00722, 0.118, 0.00316, 0.311, 0.00264, 0.0608, 0.102, 0.000818, 0.00354, 0.0502, 0.0515, 7.74e-07, 0.000136, 0.00118],
+      [7.97e-05, 3.63e-06, 0.00419, 3.63e-05, 7.6e-05, 0.016, 0.000192, 0.1, 3.66e-05, 0.201, 0.0205, 0.324, 0.00822, 0.168, 0.00021, 0.0845, 0.00413, 6.52e-05, 0.0521, 1.46e-05, 0.0121, 6.16e-08, 1.09e-05, 0.00408],
+      [0.0004, 1.82e-05, 0.00102, 0.000182, 0.000381, 0.000382, 0.000962, 0.0824, 0.0402, 0.389, 0.00289, 0.167, 0.0213, 0.204, 0.00106, 0.00434, 0.000747, 0.000327, 0.0614, 0.0201, 0.000618, 3.09e-07, 5.45e-05, 0.000473],
+      [0.00208, 4.72e-07, 0.000544, 0.00104, 0.000528, 0.000528, 0.00158, 0.0104, 0.00208, 0.0375, 0.041, 0.716, 0.000551, 0.126, 0.00572, 0.0281, 0.00364, 0.00156, 0.00988, 1.89e-06, 0.00519, 8.01e-09, 0.00104, 0.00416],
+      [0.000769, 3.5e-05, 0.00195, 0.00035, 0.000734, 0.000735, 0.00185, 0.00468, 0.000353, 0.0564, 0.00556, 0.591, 0.118, 0.0851, 0.00203, 0.0468, 0.0399, 0.000629, 0.00272, 0.000141, 0.0396, 5.95e-07, 0.000105, 0.000909],
+      [0.00488, 4.93e-07, 0.00165, 4.93e-06, 0.00542, 0.00326, 0.00652, 0.019, 0.00217, 0.113, 0.00658, 0.333, 0.0255, 0.439, 0.00761, 0.018, 0.00273, 0.00109, 0.00437, 0.000543, 0.0011, 8.38e-09, 1.48e-06, 0.0038],
+      [0.000282, 1.28e-05, 0.0148, 0.000128, 0.0144, 0.000269, 0.000678, 0.044, 0.000129, 0.161, 0.312, 0.132, 0.015, 0.299, 0.000744, 0.00306, 0.000526, 0.00023, 0.000997, 5.15e-05, 0.000435, 2.18e-07, 3.84e-05, 0.000333],
+      [6.92e-05, 3.15e-06, 0.0763, 3.15e-05, 0.00353, 0.00353, 0.0694, 0.0108, 3.18e-05, 0.175, 0.0351, 0.382, 0.00368, 0.0561, 0.0382, 0.0942, 0.0105, 0.0312, 0.000245, 1.27e-05, 0.00703, 5.35e-08, 9.43e-06, 0.00354],
+      [0.00182, 8.28e-05, 0.00462, 0.0917, 0.00173, 0.0926, 0.00437, 0.0111, 0.000835, 0.0423, 0.0131, 0.396, 0.00575, 0.11, 0.0957, 0.0197, 0.0034, 0.00149, 0.00644, 0.000332, 0.00281, 1.41e-06, 0.000248, 0.0931],
+      [0.00596, 2.69e-06, 0.009, 0.00298, 0.0119, 0.0148, 0.0119, 0.08, 2.71e-05, 0.0722, 0.0417, 0.317, 0.00314, 0.178, 0.0208, 0.184, 0.0178, 4.82e-05, 0.0209, 1.08e-05, 0.00304, 4.56e-08, 8.04e-06, 0.00597],
+      [0.000425, 1.94e-05, 0.0862, 0.000194, 0.000406, 0.000407, 0.0223, 0.00259, 0.000196, 0.393, 0.00307, 0.391, 0.00135, 0.0471, 0.0224, 0.0259, 0.000795, 0.000348, 0.00151, 7.78e-05, 0.000657, 3.29e-07, 5.8e-05, 0.000503],
+      [0.00125, 5.69e-05, 0.00318, 0.000569, 0.00119, 0.0637, 0.00301, 0.0701, 0.000574, 0.0916, 0.197, 0.335, 0.00395, 0.0758, 0.0033, 0.0136, 0.0648, 0.00102, 0.0669, 0.000229, 0.00193, 9.67e-07, 0.00017, 0.00148],
+      [0.0232, 2.07e-05, 0.0466, 0.0457, 0.0913, 0.0232, 0.0693, 0.00277, 0.000209, 0.147, 0.026, 0.281, 0.0242, 0.0957, 0.0012, 0.0731, 0.000849, 0.000372, 0.00161, 8.31e-05, 0.0462, 3.52e-07, 6.19e-05, 0.000537],
+      [0.00111, 5.06e-05, 0.0584, 0.223, 0.00106, 0.00106, 0.00267, 0.00676, 0.000511, 0.0259, 0.119, 0.353, 0.00351, 0.178, 0.00293, 0.0121, 0.00208, 0.000909, 0.00393, 0.000203, 0.00172, 8.6e-07, 0.000151, 0.00131],
+      [0.0196, 1.75e-05, 0.232, 0.000175, 0.000367, 0.000367, 0.000925, 0.0793, 0.000177, 0.105, 0.0412, 0.43, 0.00122, 0.081, 0.00102, 0.00417, 0.000718, 0.000315, 0.00136, 7.03e-05, 0.000594, 2.98e-07, 5.24e-05, 0.000454],
+      [0.00333, 0.167, 0.00847, 0.00152, 0.00318, 0.00318, 0.00802, 0.0203, 0.00153, 0.0776, 0.0241, 0.394, 0.0105, 0.202, 0.0088, 0.0362, 0.00623, 0.00273, 0.0118, 0.000609, 0.00515, 2.58e-06, 0.000454, 0.00394],
+      [0.104, 3.14e-05, 0.0362, 0.000314, 0.000658, 0.000659, 0.00166, 0.0042, 0.000317, 0.12, 0.0395, 0.461, 0.00218, 0.145, 0.00182, 0.00748, 0.00129, 0.000564, 0.0369, 0.000126, 0.00107, 5.34e-07, 9.4e-05, 0.0353]
+    ],
+    [ // pitch class 6 above the tonic
+      [0.00335, 6.17e-06, 3.01e-05, 0.00169, 3.71e-05, 0.00174, 0.00332, 0.00345, 0.0298, 0.012, 0.0939, 0.039, 0.627, 0.0162, 0.0792, 0.0101, 0.00522, 0.0148, 9.81e-05, 0.0165, 0.0296, 0.00495, 0.00165, 0.00665],
+      [0.169, 5.14e-06, 2.51e-05, 0.00141, 3.09e-05, 0.00145, 0.00277, 0.00287, 0.0248, 0.00996, 0.0783, 0.0325, 0.522, 0.0135, 0.066, 0.00838, 0.00435, 0.0124, 8.17e-05, 0.0137, 0.0247, 0.00413, 0.00137, 0.00554],
+      [0.00279, 5.14e-06, 2.51e-05, 0.00141, 3.09e-05, 0.00145, 0.00277, 0.00287, 0.0248, 0.00996, 0.245, 0.0325, 0.522, 0.0135, 0.066, 0.00838, 0.00435, 0.0124, 8.17e-05, 0.0137, 0.0247, 0.00413, 0.00137, 0.00554],
+      [0.00279, 5.14e-06, 2.51e-05, 0.00141, 3.09e-05, 0.00145, 0.00277, 0.00287, 0.0248, 0.00996, 0.0783, 0.0325, 0.689, 0.0135, 0.066, 0.00838, 0.00435, 0.0124, 8.17e-05, 0.0137, 0.0247, 0.00413, 0.00137, 0.00554],
+      [0.000838, 1.54e-06, 7.52e-06, 0.000423, 9.28e-06, 0.000436, 0.00083, 0.000862, 0.00744, 0.00299, 0.0235, 0.00975, 0.207, 0.00405, 0.0198, 0.00252, 0.00131, 0.00371, 2.45e-05, 0.0541, 0.657, 0.00124, 0.000412, 0.00166],
+      [0.00129, 2.37e-06, 1.16e-05, 0.000651, 1.43e-05, 0.000671, 0.00128, 0.00133, 0.0114, 0.0046, 0.0361, 0.015, 0.703, 0.00623, 0.107, 0.00387, 0.00201, 0.0057, 3.77e-05, 0.0833, 0.0114, 0.00191, 0.000634, 0.00256],
+      [0.00209, 3.86e-06, 1.88e-05, 0.00106, 2.32e-05, 0.00109, 0.00208, 0.00215, 0.0186, 0.00747, 0.0587, 0.274, 0.392, 0.0101, 0.0495, 0.00629, 0.00326, 0.00926, 6.13e-05, 0.0103, 0.144, 0.0031, 0.00103, 0.00415],
+      [0.000882, 1.62e-06, 7.92e-06, 0.000446, 9.77e-06, 0.000459, 0.000874, 0.000907, 0.00783, 0.00315, 0.0247, 0.0629, 0.481, 0.00427, 0.337, 0.00265, 0.00137, 0.0039, 2.58e-05, 0.057, 0.0078, 0.0013, 0.000434, 0.00175],
+      [0.00186, 3.43e-06, 1.67e-05, 0.000941, 2.06e-05, 0.000969, 0.00185, 0.00191, 0.0165, 0.00664, 0.0522, 0.0217, 0.57, 0.00901, 0.155, 0.00559, 0.0029, 0.00823, 5.45e-05, 0.00915, 0.0165, 0.00275, 0.000915, 0.115],
+      [0.00129, 2.37e-06, 1.16e-05, 0.000651, 1.43e-05, 0.000671, 0.00128, 0.0782, 0.0114, 0.0046, 0.0361, 0.015, 0.549, 0.00623, 0.184, 0.0808, 0.00201, 0.0057, 3.77e-05, 0.00633, 0.0114, 0.00191, 0.000634, 0.00256],
+      [0.000372, 6.86e-07, 3.34e-06, 0.000188, 4.12e-06, 0.000194, 0.0448, 0.000383, 0.137, 0.068, 0.0327, 0.00433, 0.559, 0.0018, 0.0532, 0.00112, 0.0228, 0.0239, 1.09e-05, 0.00183, 0.00329, 0.0228, 0.000183, 0.023],
+      [0.00209, 3.86e-06, 1.88e-05, 0.00106, 2.32e-05, 0.00109, 0.00208, 0.00215, 0.0186, 0.00747, 0.184, 0.274, 0.392, 0.0101, 0.0495, 0.00629, 0.00326, 0.00926, 6.13e-05, 0.0103, 0.0185, 0.0031, 0.00103, 0.00415],
+      [6.14e-05, 1.13e-07, 5.51e-07, 3.1e-05, 6.8e-07, 3.19e-05, 6.08e-05, 0.00373, 0.0225, 0.00754, 0.145, 0.0557, 0.623, 0.0113, 0.0784, 0.00751, 9.56e-05, 0.0149, 1.8e-06, 0.0186, 0.000543, 0.00742, 0.00369, 0.000122],
+      [0.0141, 4.28e-07, 2.09e-06, 0.000118, 2.58e-06, 0.000121, 0.000231, 0.000239, 0.00207, 0.00083, 0.00652, 0.0305, 0.807, 0.0289, 0.0055, 0.0424, 0.000363, 0.00103, 6.81e-06, 0.00114, 0.0576, 0.000344, 0.000114, 0.000462],
+      [0.000199, 3.67e-07, 1.79e-06, 0.000101, 2.21e-06, 0.000104, 0.000198, 0.000205, 0.0375, 0.0126, 0.0413, 0.00232, 0.775, 0.0486, 0.0642, 0.000599, 0.0122, 0.000882, 5.84e-06, 0.00098, 0.00176, 0.000295, 9.81e-05, 0.000396],
+      [0.00105, 1.93e-06, 9.4e-06, 0.000529, 1.16e-05, 0.000545, 0.00104, 0.00108, 0.0093, 0.00374, 0.0294, 0.0122, 0.821, 0.00507, 0.0247, 0.00314, 0.00163, 0.0671, 3.06e-05, 0.00515, 0.00926, 0.00155, 0.000515, 0.00208],
+      [0.000698, 1.29e-06, 6.27e-06, 0.000353, 7.73e-06, 0.000363, 0.000692, 0.000718, 0.0479, 0.00249, 0.103, 0.00812, 0.589, 0.00338, 0.225, 0.0021, 0.00109, 0.00309, 2.04e-05, 0.00343, 0.00617, 0.00103, 0.000343, 0.00138],
+      [0.00335, 6.17e-06, 3.01e-05, 0.00169, 3.71e-05, 0.00174, 0.00332, 0.00345, 0.0298, 0.012, 0.0939, 0.039, 0.627, 0.0162, 0.0792, 0.0101, 0.00522, 0.0148, 9.81e-05, 0.0165, 0.0296, 0.00495, 0.00165, 0.00665],
+      [0.000986, 1.81e-06, 8.85e-06, 0.0593, 1.09e-05, 0.000513, 0.000977, 0.00101, 0.00876, 0.00352, 0.0865, 0.0115, 0.478, 0.00477, 0.2, 0.00296, 0.00154, 0.122, 2.88e-05, 0.00484, 0.00871, 0.00146, 0.000485, 0.00196],
+      [0.00209, 3.86e-06, 1.88e-05, 0.00106, 2.32e-05, 0.00109, 0.00208, 0.00215, 0.0186, 0.00747, 0.184, 0.0244, 0.642, 0.0101, 0.0495, 0.00629, 0.00326, 0.00926, 6.13e-05, 0.0103, 0.0185, 0.0031, 0.00103, 0.00415],
+      [0.00239, 4.41e-06, 2.15e-05, 0.00121, 2.65e-05, 0.00125, 0.00237, 0.00246, 0.0213, 0.00854, 0.21, 0.0278, 0.591, 0.0116, 0.0566, 0.00719, 0.00373, 0.0106, 7e-05, 0.0118, 0.0212, 0.00354, 0.00118, 0.00475],
+      [0.00186, 3.43e-06, 1.67e-05, 0.000941, 2.06e-05, 0.000969, 0.00185, 0.00191, 0.0165, 0.00664, 0.274, 0.0217, 0.57, 0.00901, 0.044, 0.00559, 0.0029, 0.00823, 5.45e-05, 0.00915, 0.0165, 0.00275, 0.000915, 0.00369],
+      [0.00335, 6.17e-06, 3.01e-05, 0.00169, 3.71e-05, 0.00174, 0.00332, 0.00345, 0.0298, 0.012, 0.0939, 0.039, 0.627, 0.0162, 0.0792, 0.0101, 0.00522, 0.0148, 9.81e-05, 0.0165, 0.0296, 0.00495, 0.00165, 0.00665],
+      [0.00279, 5.14e-06, 2.51e-05, 0.00141, 3.09e-05, 0.00145, 0.00277, 0.00287, 0.0248, 0.00996, 0.0783, 0.0325, 0.689, 0.0135, 0.066, 0.00838, 0.00435, 0.0124, 8.17e-05, 0.0137, 0.0247, 0.00413, 0.00137, 0.00554],
+      [0.00209, 3.86e-06, 1.88e-05, 0.00106, 2.32e-05, 0.126, 0.00208, 0.00215, 0.0186, 0.00747, 0.184, 0.0244, 0.392, 0.0101, 0.0495, 0.00629, 0.00326, 0.134, 6.13e-05, 0.0103, 0.0185, 0.0031, 0.00103, 0.00415]
+    ],
+    [ // pitch class 7 above the tonic
+      [0.0124, 0.000448, 0.00164, 0.00314, 0.00627, 0.0327, 0.000451, 0.0166, 0.0036, 0.108, 0.308, 0.0419, 0.0392, 0.224, 0.032, 0.0211, 0.102, 0.000899, 0.0121, 0.000303, 0.0146, 0.00791, 0.00015, 0.0112],
+      [0.000775, 2.8e-05, 0.000103, 0.000196, 0.000392, 0.0145, 2.82e-05, 0.0135, 0.000225, 0.00673, 0.0567, 0.0526, 0.015, 0.064, 0.027, 0.0388, 0.244, 5.62e-05, 0.101, 1.89e-05, 0.0259, 0.125, 9.36e-06, 0.213],
+      [0.0124, 0.000448, 0.00164, 0.00314, 0.00627, 0.0327, 0.000451, 0.0166, 0.0036, 0.108, 0.308, 0.0419, 0.0392, 0.224, 0.032, 0.0211, 0.102, 0.000899, 0.0121, 0.000303, 0.0146, 0.00791, 0.00015, 0.0112],
+      [0.00122, 4.4e-05, 0.000161, 0.000308, 0.000615, 0.00321, 4.42e-05, 0.00163, 0.000353, 0.0106, 0.0498, 0.00411, 0.00384, 0.277, 0.00314, 0.0609, 0.0689, 8.82e-05, 0.138, 2.97e-05, 0.178, 0.138, 1.47e-05, 0.0599],
+      [0.000968, 3.5e-05, 0.000128, 0.000245, 0.0161, 0.0651, 3.53e-05, 0.0013, 0.000281, 0.00841, 0.133, 0.00327, 0.00306, 0.189, 0.0494, 0.00165, 0.352, 7.03e-05, 0.000945, 2.37e-05, 0.0636, 0.0475, 1.17e-05, 0.0634],
+      [0.00689, 0.000249, 0.000914, 0.00174, 0.00348, 0.0182, 0.000251, 0.00921, 0.002, 0.0598, 0.171, 0.0233, 0.0218, 0.458, 0.0178, 0.0117, 0.168, 0.0005, 0.00672, 0.000168, 0.00813, 0.0044, 8.32e-05, 0.00622],
+      [0.000666, 2.41e-05, 8.84e-05, 0.000169, 0.000337, 0.00176, 2.43e-05, 0.000892, 0.000194, 0.0165, 0.0918, 0.013, 0.00211, 0.259, 0.0447, 0.0441, 0.199, 4.84e-05, 0.108, 1.63e-05, 0.0976, 0.0434, 8.05e-06, 0.0759],
+      [0.0103, 0.000374, 0.00137, 0.00262, 0.00523, 0.0273, 0.000376, 0.0138, 0.003, 0.0897, 0.256, 0.0349, 0.199, 0.186, 0.0266, 0.0176, 0.0854, 0.00075, 0.0101, 0.000253, 0.0122, 0.0066, 0.000125, 0.00934],
+      [0.00259, 5.47e-06, 2.01e-05, 3.83e-05, 7.65e-05, 0.00528, 5.5e-06, 0.00508, 0.00492, 0.216, 0.121, 0.0103, 0.0322, 0.222, 0.0492, 0.0344, 0.204, 1.1e-05, 0.0148, 3.7e-06, 0.0587, 0.00741, 1.83e-06, 0.0123],
+      [0.000456, 1.65e-05, 6.05e-05, 0.000115, 0.000231, 0.0012, 1.66e-05, 0.00061, 0.000132, 0.00396, 0.188, 0.0162, 0.00879, 0.155, 0.0159, 0.0596, 0.313, 3.31e-05, 0.133, 1.11e-05, 0.0152, 0.0223, 5.51e-06, 0.0666],
+      [0.000218, 7.89e-06, 0.00707, 5.53e-05, 0.00011, 0.0393, 7.94e-06, 0.00381, 0.00358, 0.291, 0.185, 0.0113, 0.0289, 0.166, 0.145, 0.000371, 0.0757, 0.00706, 0.00373, 0.00353, 0.0214, 0.00718, 2.64e-06, 0.000197],
+      [0.00535, 1.32e-06, 0.00118, 0.000599, 0.0112, 0.016, 1.33e-06, 0.0166, 0.00237, 0.0334, 0.503, 0.0851, 0.00543, 0.171, 0.019, 0.0213, 0.0864, 2.65e-06, 0.00771, 8.94e-07, 0.00476, 0.00356, 4.42e-07, 0.00593],
+      [0.00413, 0.00779, 0.00392, 6.11e-05, 0.0079, 0.0162, 8.78e-06, 0.0081, 7.01e-05, 0.00988, 0.508, 0.0242, 0.184, 0.0316, 0.0512, 0.051, 0.0604, 0.0117, 0.000235, 5.9e-06, 0.00418, 0.00405, 2.91e-06, 0.0119],
+      [0.0169, 0.00279, 2.29e-05, 0.00561, 0.0112, 0.045, 6.28e-06, 0.0309, 0.0195, 0.0795, 0.0878, 0.0841, 0.101, 0.415, 0.0144, 0.0226, 0.0209, 1.25e-05, 0.00853, 0.00279, 0.0169, 0.00847, 0.00279, 0.00294],
+      [0.013, 1.81e-06, 0.00162, 0.00567, 0.00164, 0.0389, 1.82e-06, 0.0195, 0.00405, 0.136, 0.296, 0.00421, 0.0688, 0.384, 0.0122, 0.00574, 0.00768, 3.63e-06, 0.000857, 1.22e-06, 5.91e-05, 3.2e-05, 6.05e-07, 4.52e-05],
+      [0.01, 3.71e-06, 0.00167, 0.00664, 0.00336, 0.0631, 0.00166, 0.0233, 2.98e-05, 0.168, 0.3, 0.0235, 0.0119, 0.0994, 0.0598, 0.025, 0.193, 0.00166, 0.00671, 2.5e-06, 0.000121, 0.00172, 1.24e-06, 9.26e-05],
+      [0.00238, 8.62e-05, 0.000316, 0.000604, 0.0397, 0.199, 8.68e-05, 0.00319, 0.000693, 0.0207, 0.29, 0.00806, 0.046, 0.043, 0.00615, 0.0425, 0.25, 0.000173, 0.00233, 5.83e-05, 0.00281, 0.00152, 2.88e-05, 0.0406],
+      [0.00587, 1.24e-05, 0.00557, 8.67e-05, 0.0333, 0.0672, 0.00554, 0.0391, 9.95e-05, 0.257, 0.246, 0.0398, 0.0121, 0.133, 0.034, 0.0393, 0.0526, 2.48e-05, 0.000334, 8.37e-06, 0.00593, 0.0113, 4.14e-06, 0.0114],
+      [0.00477, 0.000172, 0.000633, 0.00121, 0.00241, 0.0126, 0.000174, 0.00638, 0.00139, 0.272, 0.195, 0.17, 0.0151, 0.0861, 0.166, 0.0081, 0.0394, 0.000346, 0.00465, 0.000117, 0.00563, 0.00304, 5.76e-05, 0.00431],
+      [0.0302, 9.58e-06, 0.00431, 0.00861, 0.013, 0.099, 9.64e-06, 0.0303, 7.7e-05, 0.126, 0.25, 0.0265, 0.035, 0.18, 0.0691, 0.00045, 0.1, 1.92e-05, 0.000259, 6.48e-06, 0.0217, 0.000169, 3.2e-06, 0.00451],
+      [0.0279, 5.9e-05, 0.000216, 0.000413, 0.000825, 0.0833, 5.94e-05, 0.0548, 0.000474, 0.0668, 0.488, 0.163, 0.00516, 0.0558, 0.00421, 0.00277, 0.0398, 0.000118, 0.00159, 3.99e-05, 0.00193, 0.00104, 1.97e-05, 0.00147],
+      [0.00269, 9.75e-05, 0.000358, 0.131, 0.00136, 0.00711, 9.81e-05, 0.00361, 0.000783, 0.241, 0.328, 0.00911, 0.00853, 0.136, 0.0939, 0.00458, 0.0223, 0.000196, 0.00263, 6.59e-05, 0.00318, 0.00172, 3.26e-05, 0.00244],
+      [0.129, 0.00014, 0.000514, 0.000981, 0.00196, 0.0102, 0.000141, 0.0677, 0.00113, 0.346, 0.159, 0.0131, 0.0123, 0.132, 0.00999, 0.00658, 0.0945, 0.000281, 0.00378, 9.47e-05, 0.00457, 0.00247, 4.68e-05, 0.0035],
+      [0.133, 0.00028, 0.00103, 0.00196, 0.00392, 0.0204, 0.000282, 0.0104, 0.00225, 0.0673, 0.442, 0.0262, 0.0245, 0.14, 0.02, 0.0132, 0.064, 0.000562, 0.00756, 0.000189, 0.00915, 0.00495, 9.36e-05, 0.007],
+      [0.407, 3.25e-05, 0.0146, 0.000227, 0.0149, 0.0314, 3.27e-05, 0.0012, 0.000261, 0.0948, 0.269, 0.0175, 0.00284, 0.103, 0.00232, 0.016, 0.0219, 6.52e-05, 0.000877, 2.2e-05, 0.00106, 0.000573, 1.09e-05, 0.000812]
+    ],
+    [ // pitch class 8 above the tonic
+      [5.11e-05, 0.00373, 2.28e-05, 0.00749, 0.0174, 7.69e-05, 0.00997, 0.000123, 0.0151, 0.0662, 0.00523, 0.408, 0.246, 0.105, 0.0288, 0.0461, 0.00147, 0.005, 0.0038, 0.00376, 0.0174, 2.12e-05, 0.00373, 0.00503],
+      [5.11e-05, 0.00373, 2.28e-05, 0.00749, 0.0174, 7.69e-05, 0.00997, 0.000123, 0.0151, 0.0662, 0.00523, 0.408, 0.246, 0.105, 0.0288, 0.0461, 0.00147, 0.005, 0.0038, 0.00376, 0.0174, 2.12e-05, 0.00373, 0.00503],
+      [3.19e-05, 0.00233, 1.42e-05, 0.00468, 0.0109, 4.81e-05, 0.00623, 7.68e-05, 0.00942, 0.0414, 0.00327, 0.505, 0.278, 0.0659, 0.018, 0.0288, 0.000916, 0.00313, 0.00238, 0.00235, 0.0109, 1.32e-05, 0.00233, 0.00314],
+      [5.11e-05, 0.00373, 2.28e-05, 0.00749, 0.0174, 7.69e-05, 0.00997, 0.000123, 0.0151, 0.0662, 0.00523, 0.408, 0.246, 0.105, 0.0288, 0.0461, 0.00147, 0.005, 0.0038, 0.00376, 0.0174, 2.12e-05, 0.00373, 0.00503],
+      [1.82e-05, 0.00133, 8.13e-06, 0.00268, 0.0776, 2.75e-05, 0.00356, 4.39e-05, 0.00538, 0.0951, 0.00187, 0.36, 0.0877, 0.0377, 0.0103, 0.0165, 0.000523, 0.0732, 0.00136, 0.00134, 0.221, 7.57e-06, 0.00133, 0.0018],
+      [3.19e-05, 0.00233, 1.42e-05, 0.00468, 0.0109, 4.81e-05, 0.00623, 7.68e-05, 0.00942, 0.0414, 0.00327, 0.255, 0.403, 0.0659, 0.143, 0.0288, 0.000916, 0.00313, 0.00238, 0.00235, 0.0109, 1.32e-05, 0.00233, 0.00314],
+      [5.11e-05, 0.00373, 2.28e-05, 0.00749, 0.0174, 7.69e-05, 0.00997, 0.000123, 0.0151, 0.0662, 0.00523, 0.408, 0.246, 0.105, 0.0288, 0.0461, 0.00147, 0.005, 0.0038, 0.00376, 0.0174, 2.12e-05, 0.00373, 0.00503],
+      [1.82e-05, 0.00133, 8.13e-06, 0.00268, 0.00622, 2.75e-05, 0.00356, 4.39e-05, 0.00538, 0.0236, 0.00187, 0.432, 0.0877, 0.323, 0.0103, 0.0165, 0.000523, 0.00179, 0.00136, 0.00134, 0.0777, 7.57e-06, 0.00133, 0.0018],
+      [2.32e-05, 0.0017, 1.03e-05, 0.00341, 0.00792, 3.5e-05, 0.00453, 5.59e-05, 0.189, 0.121, 0.00238, 0.186, 0.203, 0.0479, 0.0131, 0.203, 0.000666, 0.00227, 0.00173, 0.00171, 0.00793, 9.63e-06, 0.0017, 0.00229],
+      [5.55e-06, 0.000406, 2.47e-06, 0.000814, 0.00189, 8.36e-06, 0.00108, 1.34e-05, 0.00164, 0.181, 0.000569, 0.24, 0.266, 0.142, 0.00314, 0.0485, 0.000159, 0.000544, 0.0439, 0.000409, 0.0454, 2.3e-06, 0.000406, 0.0223],
+      [8.24e-06, 0.000602, 3.67e-06, 0.00121, 0.00281, 1.24e-05, 0.00161, 1.98e-05, 0.0347, 0.301, 0.000844, 0.324, 0.201, 0.017, 0.00465, 0.00744, 0.000236, 0.000807, 0.000613, 0.0651, 0.0351, 3.42e-06, 0.000602, 0.000811],
+      [1.43e-06, 0.000104, 6.36e-07, 0.0058, 0.000487, 2.15e-06, 0.000278, 3.43e-06, 0.00601, 0.0465, 0.0113, 0.766, 0.0404, 0.0756, 0.000806, 0.0348, 4.09e-05, 0.00014, 0.00569, 0.000105, 0.00607, 5.92e-07, 0.000104, 0.00014],
+      [2.16e-06, 0.000158, 9.65e-07, 0.000317, 0.000738, 3.26e-06, 0.0089, 5.21e-06, 0.0261, 0.0198, 0.000222, 0.136, 0.646, 0.0638, 0.0351, 0.0104, 6.21e-05, 0.00869, 0.000161, 0.00016, 0.0262, 8.98e-07, 0.0171, 0.000213],
+      [9.97e-07, 0.00789, 4.45e-07, 0.0158, 0.0199, 1.5e-06, 0.0041, 2.4e-06, 0.0198, 0.0364, 0.000102, 0.379, 0.263, 0.19, 0.024, 0.0165, 2.86e-05, 0.00791, 7.42e-05, 0.00398, 0.00425, 4.14e-07, 0.00398, 0.004],
+      [1.82e-05, 0.00133, 8.13e-06, 0.00268, 0.00622, 2.75e-05, 0.00356, 4.39e-05, 0.00538, 0.0236, 0.00187, 0.146, 0.588, 0.181, 0.0103, 0.0165, 0.000523, 0.00179, 0.00136, 0.00134, 0.00623, 7.57e-06, 0.00133, 0.0018],
+      [4.19e-06, 0.000306, 1.87e-06, 0.000614, 0.0178, 6.3e-06, 0.0664, 1.01e-05, 0.00124, 0.104, 0.000429, 0.132, 0.118, 0.0414, 0.166, 0.348, 0.00012, 0.00041, 0.000312, 0.000309, 0.00143, 1.74e-06, 0.000306, 0.000412],
+      [2.13e-05, 0.00155, 9.49e-06, 0.00312, 0.00726, 3.2e-05, 0.00415, 5.12e-05, 0.00628, 0.0276, 0.00218, 0.42, 0.269, 0.0439, 0.179, 0.0192, 0.000611, 0.00208, 0.00158, 0.00157, 0.00727, 8.83e-06, 0.00155, 0.0021],
+      [3.65e-05, 0.00267, 1.63e-05, 0.00535, 0.0124, 5.49e-05, 0.00712, 8.78e-05, 0.0108, 0.0473, 0.00374, 0.577, 0.175, 0.0753, 0.0206, 0.0329, 0.00105, 0.00357, 0.00271, 0.00269, 0.0125, 1.51e-05, 0.00266, 0.00359],
+      [1.7e-05, 0.00124, 7.59e-06, 0.0025, 0.00581, 2.56e-05, 0.137, 4.1e-05, 0.00502, 0.289, 0.00174, 0.203, 0.282, 0.0351, 0.00961, 0.0154, 0.000488, 0.00167, 0.00127, 0.00125, 0.00582, 7.06e-06, 0.00124, 0.00168],
+      [3.19e-05, 0.00233, 1.42e-05, 0.00468, 0.0109, 4.81e-05, 0.00623, 7.68e-05, 0.00942, 0.166, 0.00327, 0.38, 0.153, 0.0659, 0.018, 0.0288, 0.126, 0.00313, 0.00238, 0.00235, 0.0109, 1.32e-05, 0.00233, 0.00314],
+      [1.42e-05, 0.00104, 6.32e-06, 0.00208, 0.283, 2.14e-05, 0.00277, 3.41e-05, 0.00419, 0.0184, 0.00145, 0.113, 0.29, 0.0848, 0.00801, 0.0684, 0.000407, 0.00139, 0.00106, 0.00105, 0.116, 5.88e-06, 0.00104, 0.0014],
+      [1.82e-05, 0.00133, 8.13e-06, 0.00268, 0.149, 2.75e-05, 0.00356, 4.39e-05, 0.00538, 0.166, 0.00187, 0.503, 0.0877, 0.0377, 0.0103, 0.0165, 0.000523, 0.00179, 0.00136, 0.00134, 0.00623, 7.57e-06, 0.00133, 0.0018],
+      [5.11e-05, 0.00373, 2.28e-05, 0.00749, 0.0174, 7.69e-05, 0.00997, 0.000123, 0.0151, 0.0662, 0.00523, 0.408, 0.246, 0.105, 0.0288, 0.0461, 0.00147, 0.005, 0.0038, 0.00376, 0.0174, 2.12e-05, 0.00373, 0.00503],
+      [4.25e-05, 0.00311, 1.9e-05, 0.00624, 0.0145, 6.41e-05, 0.0083, 0.000102, 0.0126, 0.0552, 0.00436, 0.34, 0.371, 0.0879, 0.024, 0.0384, 0.00122, 0.00417, 0.00317, 0.00314, 0.0145, 1.77e-05, 0.00311, 0.00419],
+      [3.65e-05, 0.00267, 1.63e-05, 0.00535, 0.0124, 5.49e-05, 0.00712, 8.78e-05, 0.0108, 0.0473, 0.147, 0.435, 0.175, 0.0753, 0.0206, 0.0329, 0.00105, 0.00357, 0.00271, 0.00269, 0.0125, 1.51e-05, 0.00266, 0.00359]
+    ],
+    [ // pitch class 9 above the tonic
+      [0.00484, 0.000692, 0.00231, 0.0122, 0.00162, 0.0134, 0.000696, 0.0129, 0.0613, 0.00974, 0.435, 0.0269, 0.124, 0.173, 0.0691, 0.00302, 0.0178, 0.00116, 0.00623, 0.012, 0.000931, 0.003, 0.000231, 0.00853],
+      [0.0011, 0.000157, 0.000524, 0.00278, 0.000367, 0.00304, 0.000158, 0.00294, 0.0139, 0.00221, 0.19, 0.00611, 0.0281, 0.0393, 0.198, 0.000687, 0.14, 0.000263, 0.229, 0.00272, 0.000212, 0.0461, 5.25e-05, 0.0928],
+      [0.00404, 0.000576, 0.00192, 0.0102, 0.00135, 0.0111, 0.00058, 0.0108, 0.0511, 0.00811, 0.363, 0.0224, 0.103, 0.144, 0.0576, 0.00252, 0.0148, 0.000964, 0.00519, 0.00998, 0.000776, 0.0025, 0.000193, 0.174],
+      [0.00161, 0.000231, 0.000769, 0.00407, 0.000539, 0.00446, 0.000232, 0.00431, 0.0204, 0.00325, 0.212, 0.00896, 0.0412, 0.191, 0.0897, 0.00101, 0.0726, 0.000386, 0.00208, 0.204, 0.00031, 0.0677, 7.7e-05, 0.0695],
+      [0.00404, 0.000576, 0.00192, 0.0102, 0.00135, 0.0111, 0.00058, 0.0108, 0.0511, 0.00811, 0.363, 0.0224, 0.103, 0.144, 0.224, 0.00252, 0.0148, 0.000964, 0.00519, 0.00998, 0.000776, 0.0025, 0.000193, 0.00711],
+      [0.00101, 0.000144, 0.000481, 0.00254, 0.000337, 0.00279, 0.000145, 0.00269, 0.0128, 0.00203, 0.132, 0.0056, 0.151, 0.244, 0.139, 0.00063, 0.087, 0.000241, 0.0013, 0.169, 0.000194, 0.0423, 4.81e-05, 0.00178],
+      [0.000591, 8.43e-05, 0.000281, 0.00149, 0.000197, 0.026, 8.49e-05, 0.00158, 0.0319, 0.00119, 0.053, 0.00328, 0.0639, 0.0943, 0.204, 0.000369, 0.246, 0.000141, 0.123, 0.123, 0.000114, 0.0248, 2.82e-05, 0.00104],
+      [0.00269, 0.000384, 0.00128, 0.00678, 0.000898, 0.00743, 0.000387, 0.00718, 0.034, 0.00541, 0.242, 0.0149, 0.291, 0.0961, 0.0384, 0.00168, 0.121, 0.112, 0.00346, 0.00666, 0.000517, 0.00167, 0.000128, 0.00474],
+      [0.000637, 9.1e-05, 0.000304, 0.00161, 0.000213, 0.00176, 9.16e-05, 0.0017, 0.0344, 0.00128, 0.0836, 0.0299, 0.0426, 0.339, 0.272, 0.0267, 0.0813, 0.000152, 0.0271, 0.0279, 0.000123, 0.000394, 3.04e-05, 0.0274],
+      [0.00242, 0.000346, 0.00115, 0.00611, 0.000808, 0.00668, 0.000348, 0.00646, 0.0306, 0.105, 0.218, 0.0134, 0.0618, 0.0864, 0.0346, 0.102, 0.309, 0.000579, 0.00312, 0.00599, 0.000466, 0.0015, 0.000116, 0.00427],
+      [0.00319, 0.00313, 3.59e-05, 0.00642, 2.52e-05, 0.00955, 0.00313, 0.00332, 0.188, 0.0469, 0.325, 0.0409, 0.058, 0.102, 0.107, 4.71e-05, 0.0408, 1.8e-05, 0.025, 0.0313, 1.45e-05, 4.67e-05, 3.6e-06, 0.00636],
+      [0.00166, 5.61e-06, 0.00327, 0.00984, 1.31e-05, 0.00498, 5.65e-06, 0.00822, 0.00212, 7.9e-05, 0.669, 0.057, 0.00263, 0.173, 0.0282, 0.00165, 0.0115, 9.39e-06, 0.00654, 0.00172, 0.00325, 0.00165, 0.00163, 0.0114],
+      [3.28e-05, 4.68e-06, 1.56e-05, 0.00279, 0.00678, 9.05e-05, 4.71e-06, 0.0055, 0.0194, 0.00683, 0.532, 0.0381, 0.197, 0.0228, 0.0762, 0.00679, 0.0204, 0.00407, 4.22e-05, 0.0299, 6.3e-06, 0.00814, 1.56e-06, 0.0231],
+      [0.000126, 1.8e-05, 6.01e-05, 0.00553, 0.00525, 0.0316, 1.81e-05, 0.042, 0.163, 0.0159, 0.121, 0.0945, 0.159, 0.27, 0.0487, 0.0157, 0.000463, 0.00524, 0.000162, 0.000312, 0.0104, 7.81e-05, 6.02e-06, 0.0106],
+      [0.0028, 0.000698, 0.00209, 0.00282, 5.62e-06, 0.0153, 2.42e-06, 0.0126, 0.0621, 0.00421, 0.373, 0.00427, 0.173, 0.318, 0.026, 0.000706, 0.00145, 4.02e-06, 2.17e-05, 0.00143, 3.24e-06, 1.04e-05, 8.03e-07, 2.97e-05],
+      [0.000475, 6.78e-05, 0.000226, 0.0208, 0.000159, 0.0209, 0.0197, 0.00127, 0.00601, 0.0206, 0.552, 0.00264, 0.0513, 0.017, 0.203, 0.000296, 0.0606, 0.000113, 0.000611, 0.00117, 9.13e-05, 0.0199, 2.27e-05, 0.000836],
+      [0.009, 0.00446, 0.0045, 0.0669, 3.59e-05, 0.0225, 1.55e-05, 0.0314, 0.121, 0.00911, 0.41, 0.000597, 0.0294, 0.035, 0.228, 0.00451, 0.0226, 2.57e-05, 0.000138, 0.000266, 2.07e-05, 6.66e-05, 5.13e-06, 0.00019],
+      [0.0532, 2.62e-05, 8.74e-05, 0.0156, 6.12e-05, 0.0535, 0.0076, 0.0232, 0.116, 0.00794, 0.6, 0.00859, 0.0274, 0.0444, 0.0405, 0.000114, 0.000673, 4.38e-05, 0.000236, 0.000454, 3.53e-05, 0.000114, 8.75e-06, 0.000323],
+      [0.00404, 0.000576, 0.00192, 0.0102, 0.00135, 0.0111, 0.00058, 0.0108, 0.0511, 0.00811, 0.363, 0.0224, 0.103, 0.144, 0.224, 0.00252, 0.0148, 0.000964, 0.00519, 0.00998, 0.000776, 0.0025, 0.000193, 0.00711],
+      [0.0321, 5.49e-05, 0.000183, 0.0803, 0.000128, 0.0487, 5.52e-05, 0.00103, 0.0842, 0.0325, 0.59, 0.018, 0.0257, 0.0296, 0.0372, 0.00024, 0.00141, 9.18e-05, 0.000494, 0.0168, 7.39e-05, 0.000238, 1.83e-05, 0.000677],
+      [0.146, 0.000494, 0.00165, 0.00872, 0.00115, 0.00955, 0.000497, 0.00923, 0.0438, 0.00695, 0.311, 0.162, 0.0883, 0.123, 0.0494, 0.00216, 0.0127, 0.000827, 0.00445, 0.00856, 0.000665, 0.00214, 0.000165, 0.00609],
+      [0.000258, 3.68e-05, 0.000123, 0.0751, 8.6e-05, 0.0326, 3.7e-05, 0.0432, 0.11, 0.0218, 0.459, 0.0546, 0.0598, 0.073, 0.0675, 0.000161, 0.000945, 6.16e-05, 0.000331, 0.000637, 4.95e-05, 0.000159, 1.23e-05, 0.000454],
+      [0.00303, 0.000432, 0.00144, 0.00763, 0.00101, 0.00836, 0.000435, 0.00807, 0.0383, 0.00608, 0.647, 0.0168, 0.0772, 0.108, 0.0432, 0.00189, 0.0111, 0.000723, 0.00389, 0.00749, 0.000582, 0.00187, 0.000144, 0.00533],
+      [0.00484, 0.000692, 0.00231, 0.0122, 0.00162, 0.0134, 0.000696, 0.0129, 0.0613, 0.00974, 0.435, 0.0269, 0.124, 0.173, 0.0691, 0.00302, 0.0178, 0.00116, 0.00623, 0.012, 0.000931, 0.003, 0.000231, 0.00853],
+      [0.000865, 0.000124, 0.000412, 0.0736, 0.000289, 0.00239, 0.000124, 0.038, 0.0467, 0.0375, 0.578, 0.0405, 0.0935, 0.0309, 0.0481, 0.00054, 0.00317, 0.000207, 0.00111, 0.00214, 0.000166, 0.000535, 4.13e-05, 0.00152]
+    ],
+    [ // pitch class 10 above the tonic
+      [0.00399, 1.86e-06, 0.0189, 0.00845, 0.00349, 0.000527, 0.0164, 0.00749, 0.00403, 0.146, 0.0989, 0.408, 0.0291, 0.18, 0.0115, 0.0164, 0.00604, 0.0169, 0.00549, 0.00101, 0.0109, 8.46e-06, 0.000498, 0.00598],
+      [0.00153, 7.17e-07, 0.00726, 0.00325, 0.00134, 0.000203, 0.0063, 0.00288, 0.00155, 0.0562, 0.038, 0.541, 0.0881, 0.146, 0.00443, 0.00632, 0.00232, 0.0834, 0.00211, 0.000388, 0.00421, 3.26e-06, 0.000192, 0.0023],
+      [0.00249, 1.17e-06, 0.0118, 0.00528, 0.00218, 0.000329, 0.0102, 0.00468, 0.00252, 0.0913, 0.0618, 0.255, 0.0182, 0.238, 0.0072, 0.0103, 0.00378, 0.0106, 0.00343, 0.00063, 0.132, 5.29e-06, 0.000311, 0.129],
+      [0.00399, 1.86e-06, 0.0189, 0.00845, 0.00349, 0.000527, 0.0164, 0.00749, 0.00403, 0.146, 0.0989, 0.408, 0.0291, 0.18, 0.0115, 0.0164, 0.00604, 0.0169, 0.00549, 0.00101, 0.0109, 8.46e-06, 0.000498, 0.00598],
+      [0.000831, 3.89e-07, 0.0456, 0.00176, 0.000726, 0.00011, 0.00341, 0.00156, 0.000841, 0.0304, 0.104, 0.377, 0.00607, 0.288, 0.0024, 0.0451, 0.00126, 0.00352, 0.0428, 0.00021, 0.00228, 1.76e-06, 0.0418, 0.00125],
+      [0.00399, 1.86e-06, 0.0189, 0.00845, 0.00349, 0.000527, 0.0164, 0.00749, 0.00403, 0.146, 0.0989, 0.408, 0.0291, 0.18, 0.0115, 0.0164, 0.00604, 0.0169, 0.00549, 0.00101, 0.0109, 8.46e-06, 0.000498, 0.00598],
+      [0.000798, 3.73e-07, 0.00377, 0.00169, 0.000697, 0.000105, 0.00328, 0.0015, 0.000807, 0.0292, 0.0598, 0.322, 0.0458, 0.116, 0.0023, 0.123, 0.0412, 0.0834, 0.0811, 0.000202, 0.0822, 1.69e-06, 9.96e-05, 0.0012],
+      [0.000425, 1.98e-07, 0.0446, 0.000899, 0.000371, 5.61e-05, 0.00174, 0.000797, 0.000429, 0.228, 0.0531, 0.299, 0.0031, 0.104, 0.00123, 0.00175, 0.000643, 0.129, 0.000584, 0.000107, 0.129, 9e-07, 5.3e-05, 0.000636],
+      [0.00222, 1.04e-06, 0.0105, 0.0047, 0.00194, 0.000293, 0.0091, 0.00416, 0.00224, 0.192, 0.0549, 0.338, 0.127, 0.1, 0.0064, 0.00913, 0.114, 0.00938, 0.00305, 0.00056, 0.00608, 4.7e-06, 0.000277, 0.00332],
+      [0.000475, 2.22e-07, 0.00225, 0.00101, 0.0242, 6.27e-05, 0.00195, 0.0247, 0.00048, 0.208, 0.0118, 0.382, 0.00347, 0.212, 0.00137, 0.0734, 0.00072, 0.00201, 0.0483, 0.00012, 0.0013, 1.01e-06, 5.93e-05, 0.000712],
+      [0.000475, 2.22e-07, 0.00225, 0.00101, 0.000415, 6.27e-05, 0.0496, 0.000892, 0.0481, 0.398, 0.131, 0.0724, 0.0511, 0.0691, 0.0728, 0.00196, 0.0483, 0.0496, 0.000653, 0.00012, 0.0013, 1.01e-06, 5.93e-05, 0.000712],
+      [2.81e-05, 1.31e-08, 0.00295, 5.94e-05, 2.45e-05, 0.00141, 0.000115, 0.00287, 0.00284, 0.102, 0.144, 0.61, 0.00724, 0.0969, 0.00289, 0.00715, 0.00426, 0.00293, 0.00145, 7.09e-06, 0.00289, 5.95e-08, 3.5e-06, 0.00707],
+      [0.000554, 2.59e-07, 0.00262, 0.00117, 0.000484, 7.32e-05, 0.00228, 0.00104, 0.00056, 0.0481, 0.0693, 0.334, 0.226, 0.192, 0.0016, 0.00228, 0.00084, 0.0301, 0.000762, 0.0279, 0.0293, 1.18e-06, 6.92e-05, 0.0286],
+      [0.0058, 1.79e-08, 0.00594, 0.00776, 0.00771, 5.06e-06, 0.027, 0.00583, 0.00388, 0.138, 0.00863, 0.33, 0.0675, 0.355, 0.000111, 0.0136, 0.00198, 0.00784, 0.00389, 0.00193, 0.00586, 8.12e-08, 4.78e-06, 0.00198],
+      [0.00024, 1.12e-07, 0.00114, 0.0126, 0.00021, 3.17e-05, 0.000987, 0.000451, 0.000243, 0.129, 0.391, 0.0848, 0.00176, 0.372, 0.000694, 0.00099, 0.000364, 0.00102, 0.000331, 6.07e-05, 0.000659, 5.1e-07, 3e-05, 0.00036],
+      [9.73e-05, 4.55e-08, 0.0883, 0.00508, 0.00496, 1.29e-05, 0.0248, 0.00506, 0.00498, 0.286, 0.115, 0.234, 0.0105, 0.0922, 0.0539, 0.0297, 0.000147, 0.0443, 0.000134, 2.46e-05, 0.000267, 2.06e-07, 1.21e-05, 0.000146],
+      [0.00181, 8.48e-07, 0.00858, 0.00384, 0.00158, 0.00024, 0.00745, 0.00341, 0.00183, 0.0664, 0.0449, 0.367, 0.0132, 0.0819, 0.369, 0.00747, 0.00275, 0.00768, 0.00249, 0.000458, 0.00497, 3.85e-06, 0.000226, 0.00272],
+      [0.000499, 2.33e-07, 0.0524, 0.00106, 0.000436, 6.59e-05, 0.052, 0.201, 0.000504, 0.0433, 0.112, 0.426, 0.0286, 0.0225, 0.00144, 0.0271, 0.000756, 0.00211, 0.000686, 0.000126, 0.0264, 1.06e-06, 6.22e-05, 0.000747],
+      [0.000391, 1.83e-07, 0.0607, 0.000829, 0.000342, 5.17e-05, 0.119, 0.000735, 0.000396, 0.23, 0.00969, 0.413, 0.00286, 0.0765, 0.0403, 0.00161, 0.000593, 0.0409, 0.000538, 9.88e-05, 0.00107, 8.3e-07, 4.88e-05, 0.000586],
+      [0.00285, 1.33e-06, 0.0135, 0.00604, 0.00249, 0.000376, 0.0117, 0.00535, 0.00288, 0.104, 0.0706, 0.577, 0.0208, 0.129, 0.00823, 0.0117, 0.00432, 0.0121, 0.00392, 0.00072, 0.00781, 6.05e-06, 0.000356, 0.00427],
+      [0.00153, 7.17e-07, 0.00726, 0.0802, 0.0783, 0.000203, 0.0063, 0.00288, 0.00155, 0.287, 0.038, 0.311, 0.0112, 0.0693, 0.00443, 0.00632, 0.0792, 0.00649, 0.00211, 0.000388, 0.00421, 3.26e-06, 0.000192, 0.0023],
+      [0.000831, 3.89e-07, 0.0873, 0.418, 0.000726, 0.00011, 0.00341, 0.00156, 0.000841, 0.0721, 0.0623, 0.293, 0.00607, 0.0375, 0.0024, 0.00343, 0.00126, 0.00352, 0.00114, 0.00021, 0.00228, 1.76e-06, 0.000104, 0.00125],
+      [0.03, 2.74e-07, 0.15, 0.00124, 0.000513, 7.75e-05, 0.00241, 0.0011, 0.000593, 0.227, 0.103, 0.413, 0.00428, 0.0265, 0.00169, 0.00242, 0.000889, 0.00248, 0.000807, 0.000148, 0.031, 1.24e-06, 7.32e-05, 0.000879],
+      [0.377, 1.17e-06, 0.0118, 0.00528, 0.00218, 0.000329, 0.0102, 0.00468, 0.00252, 0.0913, 0.0618, 0.255, 0.0182, 0.113, 0.0072, 0.0103, 0.00378, 0.0106, 0.00343, 0.00063, 0.00684, 5.29e-06, 0.000311, 0.00374],
+      [0.00153, 7.17e-07, 0.00726, 0.00325, 0.00134, 0.000203, 0.0063, 0.00288, 0.00155, 0.21, 0.115, 0.465, 0.0881, 0.0693, 0.00443, 0.00632, 0.00232, 0.00649, 0.00211, 0.000388, 0.00421, 3.26e-06, 0.000192, 0.0023]
+    ],
+    [ // pitch class 11 above the tonic
+      [0.00282, 0.00468, 0.000318, 0.00407, 7.05e-06, 0.00345, 0.00375, 0.00128, 0.0422, 0.0082, 0.197, 0.0105, 0.593, 0.0087, 0.0665, 0.000352, 0.0128, 0.0156, 0.000955, 0.0119, 0.00282, 0.000941, 0.000937, 0.00657],
+      [0.00101, 0.00167, 0.000113, 0.00145, 2.52e-06, 0.00123, 0.00134, 0.000457, 0.0151, 0.00293, 0.0704, 0.00376, 0.355, 0.00311, 0.0952, 0.000126, 0.00459, 0.00557, 0.000341, 0.00424, 0.00101, 0.000336, 0.000335, 0.431],
+      [0.00282, 0.00468, 0.000318, 0.00407, 7.05e-06, 0.00345, 0.00375, 0.00128, 0.0422, 0.0082, 0.197, 0.0105, 0.593, 0.0087, 0.0665, 0.000352, 0.0128, 0.0156, 0.000955, 0.0119, 0.00282, 0.000941, 0.000937, 0.00657],
+      [0.00094, 0.0682, 0.000106, 0.00136, 2.35e-06, 0.00115, 0.00125, 0.000426, 0.0141, 0.00273, 0.0658, 0.00351, 0.331, 0.0029, 0.156, 0.000117, 0.00428, 0.0052, 0.000318, 0.271, 0.000941, 0.067, 0.000312, 0.00219],
+      [0.00128, 0.00213, 0.000144, 0.00185, 3.21e-06, 0.00157, 0.00171, 0.000581, 0.0192, 0.00373, 0.0897, 0.00479, 0.724, 0.00395, 0.121, 0.00016, 0.00584, 0.00709, 0.000434, 0.00539, 0.00128, 0.000428, 0.000426, 0.00299],
+      [0.0003, 0.000498, 3.38e-05, 0.000433, 7.5e-07, 0.000367, 0.000399, 0.000136, 0.00449, 0.000872, 0.021, 0.00112, 0.829, 0.000925, 0.113, 3.74e-05, 0.00137, 0.0229, 0.000102, 0.00126, 0.0003, 0.0001, 9.97e-05, 0.000699],
+      [0.00235, 0.0039, 0.000265, 0.00339, 5.88e-06, 0.00288, 0.00313, 0.00107, 0.0351, 0.00683, 0.331, 0.00877, 0.494, 0.00725, 0.0554, 0.000293, 0.0107, 0.013, 0.000796, 0.00989, 0.00235, 0.000784, 0.000781, 0.00547],
+      [0.000271, 0.00045, 3.06e-05, 0.000391, 6.78e-07, 0.000332, 0.000361, 0.000123, 0.00405, 0.000788, 0.019, 0.00101, 0.596, 0.000836, 0.237, 3.38e-05, 0.0782, 0.0015, 9.18e-05, 0.0588, 0.000271, 9.05e-05, 9.01e-05, 0.000631],
+      [0.000282, 0.0205, 3.18e-05, 0.000407, 7.05e-07, 0.000345, 0.000375, 0.000128, 0.00422, 0.0408, 0.0197, 0.00105, 0.819, 0.00087, 0.00665, 3.52e-05, 0.0813, 0.00156, 9.55e-05, 0.00119, 0.000282, 9.41e-05, 9.37e-05, 0.000657],
+      [0.00157, 0.0026, 0.000177, 0.00226, 3.92e-06, 0.00192, 0.00208, 0.000711, 0.0234, 0.00456, 0.11, 0.00585, 0.663, 0.116, 0.037, 0.000195, 0.00714, 0.00867, 0.00053, 0.00659, 0.00157, 0.000523, 0.000521, 0.00365],
+      [4.81e-05, 0.00691, 5.42e-06, 6.94e-05, 1.2e-07, 5.89e-05, 0.0376, 2.18e-05, 0.178, 0.00014, 0.058, 0.00701, 0.491, 0.000148, 0.141, 6e-06, 0.0105, 0.0378, 1.63e-05, 0.0173, 0.00687, 0.00343, 1.6e-05, 0.00353],
+      [0.000415, 0.0595, 4.67e-05, 0.000598, 1.04e-06, 0.000508, 0.000552, 0.000188, 0.0062, 0.00121, 0.411, 0.119, 0.0873, 0.237, 0.0392, 5.17e-05, 0.0313, 0.0023, 0.00014, 0.00174, 0.000415, 0.000138, 0.000138, 0.000966],
+      [9.16e-06, 0.00131, 0.000651, 0.00131, 2.29e-08, 0.000661, 1.22e-05, 0.000654, 0.0222, 0.00717, 0.335, 0.0143, 0.496, 2.83e-05, 0.0684, 1.14e-06, 0.0104, 0.0182, 0.0013, 0.013, 0.00326, 0.000653, 0.00195, 0.00262],
+      [0.000239, 0.000397, 2.69e-05, 0.000345, 5.98e-07, 0.000292, 0.000318, 0.0171, 0.0205, 0.000695, 0.118, 0.000892, 0.728, 0.000737, 0.0565, 2.98e-05, 0.018, 0.00132, 0.017, 0.00101, 0.0172, 7.98e-05, 7.94e-05, 0.000557],
+      [1.89e-05, 3.13e-05, 2.13e-06, 2.72e-05, 4.72e-08, 2.31e-05, 2.51e-05, 0.00135, 0.0244, 0.00273, 0.0602, 7.05e-05, 0.871, 0.0215, 0.00982, 2.35e-06, 0.00276, 0.000104, 6.39e-06, 0.00276, 0.00136, 6.3e-06, 6.27e-06, 0.00138],
+      [0.000522, 0.0379, 5.88e-05, 0.000753, 1.31e-06, 0.000639, 0.000695, 0.000237, 0.00781, 0.372, 0.185, 0.00195, 0.258, 0.00161, 0.0494, 0.0371, 0.0394, 0.00289, 0.000177, 0.0022, 0.000523, 0.000174, 0.000174, 0.00122],
+      [0.0142, 0.00721, 1.12e-05, 0.0142, 2.48e-07, 0.0283, 0.000132, 4.5e-05, 0.156, 0.000289, 0.0915, 0.00741, 0.465, 0.00735, 0.143, 1.24e-05, 0.0145, 0.0428, 3.36e-05, 0.00746, 9.94e-05, 3.31e-05, 3.3e-05, 0.000231],
+      [0.00176, 0.00293, 0.000199, 0.00254, 4.41e-06, 0.127, 0.00234, 0.000799, 0.151, 0.00512, 0.123, 0.00658, 0.371, 0.00544, 0.0416, 0.00022, 0.133, 0.00976, 0.000597, 0.00742, 0.00176, 0.000588, 0.000586, 0.0041],
+      [0.000672, 0.00111, 7.57e-05, 0.239, 1.68e-06, 0.0484, 0.000893, 0.000305, 0.01, 0.00195, 0.047, 0.0501, 0.332, 0.00207, 0.206, 8.37e-05, 0.00306, 0.0513, 0.000227, 0.00283, 0.000672, 0.000224, 0.000223, 0.00156],
+      [0.00108, 0.0018, 0.000122, 0.00156, 2.71e-06, 0.0783, 0.00144, 0.000492, 0.0162, 0.00315, 0.153, 0.081, 0.536, 0.00334, 0.103, 0.000135, 0.00494, 0.006, 0.000367, 0.00456, 0.00109, 0.000362, 0.00036, 0.00253],
+      [0.00235, 0.0039, 0.000265, 0.00339, 5.88e-06, 0.00288, 0.00313, 0.00107, 0.0351, 0.00683, 0.331, 0.00877, 0.494, 0.00725, 0.0554, 0.000293, 0.0107, 0.013, 0.000796, 0.00989, 0.00235, 0.000784, 0.000781, 0.00547],
+      [0.000441, 0.032, 4.96e-05, 0.126, 1.1e-06, 0.000539, 0.0318, 0.0002, 0.0691, 0.0325, 0.156, 0.00164, 0.436, 0.00136, 0.0416, 5.49e-05, 0.0333, 0.0337, 0.000149, 0.00185, 0.000441, 0.000147, 0.000146, 0.00103],
+      [0.00282, 0.00468, 0.000318, 0.00407, 7.05e-06, 0.00345, 0.00375, 0.00128, 0.0422, 0.0082, 0.197, 0.0105, 0.593, 0.0087, 0.0665, 0.000352, 0.0128, 0.0156, 0.000955, 0.0119, 0.00282, 0.000941, 0.000937, 0.00657],
+      [0.000784, 0.168, 8.83e-05, 0.00113, 1.96e-06, 0.000959, 0.00104, 0.000355, 0.0117, 0.00228, 0.277, 0.00292, 0.443, 0.00242, 0.074, 9.77e-05, 0.00357, 0.00434, 0.000265, 0.0033, 0.000784, 0.000261, 0.00026, 0.00182],
+      [0.273, 0.00106, 7.22e-05, 0.000924, 1.6e-06, 0.0917, 0.000853, 0.000291, 0.055, 0.00186, 0.136, 0.0478, 0.271, 0.00198, 0.0151, 7.99e-05, 0.00292, 0.0945, 0.000217, 0.0027, 0.000641, 0.000214, 0.000213, 0.00149]
+    ]
+  ];
+
+  // p(next key | last key, interval into it), over the instrument's 13 keys
+  function nextProbs(last, incoming) {
+    const row = TRIGRAM[last % 12][incoming ? stepIdx(incoming) + 1 : 0];
+    const p = new Array(N_KEYS).fill(0);
+    for (let k = 0; k < N_KEYS; k++) {
+      if (k !== last) p[k] = row[stepIdx(k - last)];
+    }
+    return p;
+  }
+
+  /* ============================================================
+     LAYOUT
+
+     A layout is n + 1 boundaries in canvas px from the left edge,
+     where n is the number of notes: key i sounds for clicks in
+     [b[i], b[i+1]). Keys are always in pitch order, so the regions
+     tile the strip.
+     ============================================================ */
+  function uniformLayout(n) {
+    return Array.from({ length: n + 1 }, (_, i) => i * CFG.W / n);
+  }
+
+  /* last: key index of the last distinct note (null before the first)
+     incoming: step into it, in keys (null if there is none)
+     anchor: x of the last click */
+  function computeLayout(alpha, last, incoming, anchor) {
+    const n = N_KEYS;
+    if (!(alpha > 0) || last === null) return uniformLayout(n);
+    const W = CFG.W;
+    const p = nextProbs(last, incoming);
+    const beta = alpha >= 1 ? Infinity : alpha / (1 - alpha);
+    // the repeat band: centred on the click, but kept EDGE_MARGIN away from
+    // an edge that still has notes beyond it; at the lowest or highest
+    // note it runs to that edge
+    let c = anchor;
+    if (last > 0) c = Math.max(c, CFG.EDGE_MARGIN);
+    if (last < n - 1) c = Math.min(c, W - CFG.EDGE_MARGIN);
+    const lo = last === 0 ? 0 : c - CFG.EPS;
+    const hi = last === n - 1 ? W : c + CFG.EPS;
+    const b = new Array(n + 1);
+    b[0] = 0; b[n] = W;
+    fillSide(b, p, 0, last, 0, lo, beta);          // lower notes to the left of the band
+    b[last] = lo; b[last + 1] = hi;
+    fillSide(b, p, last + 1, n, hi, W, beta);      // higher notes to the right
+    return b;
+  }
+
+  // spread keys [i0, i1) over [x0, x1], each in proportion to p^beta
+  function fillSide(b, p, i0, i1, x0, x1, beta) {
+    if (i1 <= i0) return;
+    const ps = p.slice(i0, i1);
+    let w;
+    if (beta === Infinity) {
+      const best = ps.indexOf(Math.max(...ps));
+      w = ps.map((_, j) => (j === best ? 1 : 0));
+    } else {
+      w = ps.map(v => Math.pow(v, beta));
+    }
+    const total = w.reduce((a, c) => a + c, 0);
+    let x = x0;
+    for (let j = 0; j < w.length; j++) { b[i0 + j] = x; x += (x1 - x0) * w[j] / total; }
+    b[i1] = x1;
+  }
+
+  function hitTest(b, x) {
+    x = Math.max(0, Math.min(CFG.W - 1e-6, x));
+    for (let i = 0; i < b.length - 1; i++) if (x >= b[i] && x < b[i + 1]) return i;
+    return null;
+  }
+
+  /* ============================================================
+     AUDIO
+     ============================================================ */
+  let AC = null, VOICE = null;
+  function audio() {
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === "suspended") AC.resume();
+    return AC;
+  }
+  function semiToHz(s) { return CFG.BASE_HZ * Math.pow(2, s / 12); }
+
+  /* --- the instrument's voice: sustained triangle --- */
+  function voiceOn(semi) {
+    const ac = audio();
+    if (VOICE) voiceOff();
+    const osc = ac.createOscillator(), g = ac.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(semiToHz(semi), ac.currentTime);
+    g.gain.setValueAtTime(0, ac.currentTime);
+    g.gain.linearRampToValueAtTime(0.20, ac.currentTime + 0.015);
+    osc.connect(g).connect(ac.destination);
+    osc.start();
+    VOICE = { osc, g };
+  }
+  function voiceOff() {
+    if (!VOICE) return;
+    const ac = audio(), v = VOICE; VOICE = null;
+    v.g.gain.cancelScheduledValues(ac.currentTime);
+    v.g.gain.setValueAtTime(v.g.gain.value, ac.currentTime);
+    v.g.gain.linearRampToValueAtTime(0, ac.currentTime + 0.03);
+    v.osc.stop(ac.currentTime + 0.06);
+  }
+
+  /* --- the cues: lowpassed sawtooth, deliberately a different timbre
+         from the instrument so they don't read as demonstrations --- */
+  function cueDurMs(semis) { return semis.length * CFG.CUE_NOTE_MS + 120; }
+  function playCue(semis) {
+    const ac = audio();
+    const t0 = ac.currentTime + 0.04;
+    const lp = ac.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(1500, t0);
+    lp.Q.value = 0.8;
+    const out = ac.createGain();
+    out.gain.value = 0.9;
+    lp.connect(out).connect(ac.destination);
+    const live = [];
+    const step = CFG.CUE_NOTE_MS / 1000;
+    semis.forEach((s, i) => {
+      const st = t0 + i * step, en = st + step * 0.88;
+      const osc = ac.createOscillator();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(semiToHz(s), st);
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0, st);
+      g.gain.linearRampToValueAtTime(0.15, st + 0.02);
+      g.gain.setValueAtTime(0.15, Math.max(st + 0.03, en - 0.06));
+      g.gain.linearRampToValueAtTime(0, en);
+      osc.connect(g).connect(lp);
+      osc.start(st); osc.stop(en + 0.05);
+      live.push(osc);
+    });
+    return () => live.forEach(o => { try { o.stop(); } catch (e) { } });
+  }
+
+  /* --- replay of a recorded performance, one oscillator per note so
+         repeated presses of the same note stay separate --- */
+  function playNotes(notes) {
+    const ac = audio();
+    const t0 = ac.currentTime + 0.05;
+    const live = [];
+    for (const n of notes) {
+      const start = t0 + n.start / 1000, end = t0 + n.end / 1000 + 0.03;
+      const osc = ac.createOscillator(), g = ac.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(semiToHz(n.note), start);
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(0.20, start + 0.012);
+      g.gain.setValueAtTime(0.20, Math.max(start + 0.02, end - 0.02));
+      g.gain.linearRampToValueAtTime(0, end);
+      osc.connect(g).connect(ac.destination);
+      osc.start(start); osc.stop(end + 0.05);
+      live.push(osc);
+    }
+    return () => live.forEach(o => { try { o.stop(); } catch (e) { } });
+  }
+
+  /* ============================================================
+     DRAWING
+     ============================================================ */
+  // 0 = no outline; otherwise the alpha of the "you can play here" border
+  function playablePulse() {
+    const p = (performance.now() % 1300) / 1300;
+    return 0.35 + 0.65 * (0.5 - 0.5 * Math.cos(2 * Math.PI * p));
+  }
+
+  const MARKER_CY = CFG.MARKER_TOP + CFG.MARKER_H / 2;
+
+  function fillMarker(ctx, x, y, w, h) {
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.fill();
+  }
+
+  /* s: { layout, pressed, pointerX, pointerY, curKey, lastKey, hoverKey, glow } */
+  function drawInstrument(ctx, s) {
+    const b = s.layout;
+    ctx.save();
+    ctx.clearRect(0, 0, CFG.W, CFG.H);
+    ctx.fillStyle = s.pressed ? "#f6f8fc" : "#fbfbf9";
+    ctx.fillRect(0, 0, CFG.W, CFG.H);
+
+    // rubber bands, drawn first so the marker covers their ends:
+    // thin and gray to the region under the cursor while hovering,
+    // blue to the sounding note's marker while held
+    if (!s.pressed && s.hoverKey !== null) {
+      ctx.save();
+      ctx.strokeStyle = COL.hoverBand; ctx.globalAlpha = 0.6;
+      ctx.lineWidth = 1; ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(s.pointerX, s.pointerY);
+      ctx.lineTo((b[s.hoverKey] + b[s.hoverKey + 1]) / 2, MARKER_CY);
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (s.pressed && s.curKey !== null) {
+      ctx.save();
+      ctx.strokeStyle = COL.note; ctx.globalAlpha = 0.55;
+      ctx.lineWidth = 2; ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(s.pointerX, s.pointerY);
+      ctx.lineTo((b[s.curKey] + b[s.curKey + 1]) / 2, MARKER_CY);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    for (let i = 0; i < b.length - 1; i++) {
+      const w = b[i + 1] - b[i];
+      if (w <= 0.01) continue;                       // unreachable notes draw nothing
+      if (s.pressed && i === s.curKey) ctx.fillStyle = COL.note;
+      else if (!s.pressed && i === s.lastKey) ctx.fillStyle = COL.noteLast;
+      else if (i === s.hoverKey) ctx.fillStyle = COL.markerHover;
+      else ctx.fillStyle = COL.marker;
+      if (w > CFG.MARKER_GAP + 1) fillMarker(ctx, b[i] + CFG.MARKER_GAP / 2, CFG.MARKER_TOP, w - CFG.MARKER_GAP, CFG.MARKER_H);
+      else fillMarker(ctx, b[i] + w / 2 - 0.5, CFG.MARKER_TOP, 1, CFG.MARKER_H);   // a sliver still shows
+    }
+
+    // the melody's first note: highlighted and labelled until they start
+    if (s.startKey !== null && s.startKey !== undefined) {
+      const x0 = b[s.startKey], w = b[s.startKey + 1] - x0, cx = x0 + w / 2;
+      ctx.globalAlpha = s.startPulse;
+      ctx.fillStyle = COL.note;
+      fillMarker(ctx, x0 + CFG.MARKER_GAP / 2, CFG.MARKER_TOP, Math.max(1, w - CFG.MARKER_GAP), CFG.MARKER_H);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = COL.note;
+      ctx.font = "600 14px system-ui, -apple-system, 'Segoe UI', sans-serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "top";
+      const y0 = CFG.MARKER_TOP + CFG.MARKER_H + 5;
+      ctx.fillText("▲", cx, y0);                                         // right under the marker
+      ctx.fillText("starting note", Math.max(50, Math.min(CFG.W - 50, cx)), y0 + 17);
+    }
+
+    // pulse an outline until they play
+    if (s.glow > 0) {
+      ctx.globalAlpha = s.glow;
+      ctx.strokeStyle = "#2f6fd0"; ctx.lineWidth = 5;
+      ctx.strokeRect(3, 3, CFG.W - 6, CFG.H - 6);
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  }
+
+  /* ============================================================
+     PERFORMANCE ENGINE
+
+     One press = one note, held for as long as the button is down.
+     Moving while held changes nothing but the rubber band. The layout
+     is recomputed on every press, anchored at the press.
+     ============================================================ */
+  function makePerformer(canvas, alpha, onTick, opts) {
+    opts = opts || {};
+    const continuous = !!opts.continuous;            // free play: never ends itself
+    const hardMaxMs = continuous ? Infinity : (opts.hardMaxMs || CFG.MAX_REC_MS);
+    const silenceMs = continuous ? Infinity : (opts.silenceMs || CFG.SILENCE_MS);
+    const ctx = canvas.getContext("2d");
+    let pressed = false, over = false, pointerX = 0, pointerY = 0, curKey = null;
+    let noteEvents = [], mousePos = [], openNote = null;
+    let armed = false, recording = false, startedAt = null, raf = null;
+    let lastSoundT = 0, nextSampleT = 0;
+
+    /* the phrase: the last two distinct notes (repeats merged, as in the
+       model's corpus), where the last press landed, and the current layout */
+    let phrase = [], anchor = null, layout = uniformLayout(N_KEYS);
+    let shown = layout.slice(), from = layout.slice(), tweenT0 = 0;
+    function resetLayout() {
+      phrase = []; anchor = null; layout = uniformLayout(N_KEYS);
+      shown = layout.slice(); from = layout.slice();
+    }
+
+    function cy(e) { const r = canvas.getBoundingClientRect(); return Math.max(0, Math.min(CFG.H, (e.clientY - r.top) * (CFG.H / r.height))); }
+    function cx(e) { const r = canvas.getBoundingClientRect(); return Math.max(0, Math.min(CFG.W, (e.clientX - r.left) * (CFG.W / r.width))); }
+    function nowMs() { return recording ? performance.now() - startedAt : 0; }
+    function lastKey() { return phrase.length ? phrase[phrase.length - 1] : null; }
+    function incoming() { const n = phrase.length; return n >= 2 ? phrase[n - 1] - phrase[n - 2] : null; }
+
+    function relayout() {
+      layout = computeLayout(alpha, lastKey(), incoming(), anchor);
+      from = REDUCED_MOTION ? layout.slice() : shown.slice();
+      tweenT0 = performance.now();
+    }
+    function stepTween() {
+      const t = Math.min(1, (performance.now() - tweenT0) / CFG.TWEEN_MS);
+      const e = 1 - (1 - t) * (1 - t);
+      for (let i = 0; i < shown.length; i++) shown[i] = from[i] + (layout[i] - from[i]) * e;
+    }
+    const norm = v => +(v / CFG.W).toFixed(4);
+
+    /* ---- note bookkeeping: every sounding note gets a start and an end ---- */
+    function closeNote() {
+      if (openNote) { openNote.end = Math.round(nowMs()); openNote = null; }
+    }
+    function noteOn(key, x, layoutUsed) {
+      closeNote();
+      curKey = key;
+      voiceOn(key);
+      openNote = {
+        note: key,                           // semitones above A3
+        name: NAMES[key],
+        key,                                 // region index (the same as note)
+        start: Math.round(nowMs()), end: null,
+        x: norm(x),                          // click position, 0 = left, 1 = right
+        layout: layoutUsed.map(norm)         // the boundaries this click was judged against
+      };
+      noteEvents.push(openNote);
+    }
+
+    canvas.addEventListener("pointerdown", e => {
+      if (!armed) return;
+      if (!recording) { recording = true; startedAt = performance.now(); lastSoundT = 0; nextSampleT = 0; }
+      canvas.setPointerCapture(e.pointerId);
+      pressed = true; over = true;
+      pointerX = cx(e); pointerY = cy(e);
+      const layoutUsed = layout;                 // clicks never land on a mid-animation layout
+      const key = hitTest(layoutUsed, pointerX);
+      noteOn(key, pointerX, layoutUsed);
+      if (key !== lastKey()) {
+        phrase.push(key);
+        if (phrase.length > 2) phrase.shift();
+      }
+      anchor = pointerX;
+      relayout();
+      if (opts.onNote) opts.onNote(key);
+      e.preventDefault();
+    });
+    canvas.addEventListener("pointermove", e => { pointerX = cx(e); pointerY = cy(e); over = true; });
+    canvas.addEventListener("pointerleave", () => { if (!pressed) over = false; });
+    function release() {
+      if (!pressed) return;
+      closeNote();
+      pressed = false; curKey = null; voiceOff();
+    }
+    canvas.addEventListener("pointerup", release);
+    canvas.addEventListener("pointercancel", release);
+    canvas.addEventListener("contextmenu", e => e.preventDefault());
+
+    let startKey = opts.startKey === undefined ? null : opts.startKey;
+    const showGlow = opts.glow !== false;
+    function state(glow) {
+      const hoverKey = (armed && over && !pressed) ? hitTest(layout, pointerX) : null;
+      return {
+        layout: shown, pressed, pointerX, pointerY, curKey, lastKey: lastKey(), hoverKey,
+        glow: showGlow ? glow : 0,
+        startKey: recording ? null : startKey, startPulse: playablePulse()
+      };
+    }
+
+    function frame() {
+      stepTween();
+      if (!recording) {
+        drawInstrument(ctx, state(playablePulse()));
+        if (onTick) onTick(0, false);
+        raf = requestAnimationFrame(frame);
+        return;
+      }
+
+      const now = performance.now() - startedAt;
+      if (curKey !== null) lastSoundT = now;
+
+      // mouse position on a fixed 50 ms grid, 0 = left edge, 1 = right edge
+      while (nextSampleT <= now) {
+        mousePos.push({ t: nextSampleT, pos: norm(pointerX), down: pressed ? 1 : 0 });
+        nextSampleT += CFG.MOUSE_SAMPLE_MS;
+      }
+
+      // nothing is logged in free play, so keep only recent events
+      if (continuous) {
+        while (noteEvents.length > 50) noteEvents.shift();
+        while (mousePos.length > 100) mousePos.shift();
+      }
+
+      drawInstrument(ctx, state(0));
+      if (onTick) onTick(now, true);
+
+      const wentQuiet = (curKey === null) && (now - lastSoundT >= silenceMs);
+      if (now >= hardMaxMs || wentQuiet) finishRecording();
+      else raf = requestAnimationFrame(frame);
+    }
+
+    function finishRecording() {
+      closeNote();
+      const recEnd = noteEvents.length ? noteEvents[noteEvents.length - 1].end : 0;
+      const trace = {
+        notes: noteEvents.slice(),
+        mousepos: mousePos.filter(m => m.t <= recEnd),
+        duration_ms: recEnd
+      };
+      stop();
+      if (performer.onComplete) performer.onComplete(trace);
+    }
+
+    function arm() {
+      noteEvents = []; mousePos = []; openNote = null;
+      curKey = null; pressed = false;
+      resetLayout();                         // every recording starts from equal regions
+      armed = true; recording = false; startedAt = null;
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(frame);
+    }
+    function stop() {
+      armed = false; recording = false;
+      if (pressed) { pressed = false; curKey = null; voiceOff(); }
+      openNote = null;
+      if (raf) cancelAnimationFrame(raf); raf = null;
+    }
+    function idle() {
+      drawInstrument(ctx, {
+        layout: uniformLayout(N_KEYS), pressed: false, pointerX: 0, pointerY: 0,
+        curKey: null, lastKey: null, hoverKey: null, glow: 0,
+        startKey, startPulse: 1
+      });
+    }
+    // only between recordings: the layout is equal at the start of each one
+    function setAlpha(a) { alpha = a; }
+    const performer = { arm, stop, idle, setAlpha, onComplete: null, isRecording: () => recording };
+    return performer;
+  }
+
+  /* ============================================================
+     ASSISTANCE SLIDER
+
+     Five positions, one per value of ALPHA_VALUES, labelled with
+     ASSIST_LABELS. A fixed slider (tutorial) only shows the setting.
+     ============================================================ */
+  function assistSliderHTML(id, index, fixed) {
+    const n = ALPHA_VALUES.length;
+    return `
+    <div class="alpha-pick${fixed ? " fixed" : ""}">
+      <div class="alpha-head">
+        <label for="${id}">Assistance</label>
+        <output id="${id}-out" for="${id}">${ASSIST_LABELS[index]}</output>
+      </div>
+      <input type="range" id="${id}" min="0" max="${n - 1}" step="1" value="${index}" style="--frac:${index / (n - 1)}"${fixed ? " disabled tabindex=\"-1\"" : ""}>
+      <div class="alpha-ticks">${ASSIST_LABELS.map((lab, i) =>
+      `<span data-i="${i}"${i === index ? ' class="sel"' : ""} style="left: calc(var(--thumb) / 2 + (100% - var(--thumb)) * ${i / (n - 1)})">${lab}</span>`).join("")}</div>
+    </div>`;
+  }
+
+  // keep the green fill and the bold label in step with the slider
+  function setSliderFill(input) {
+    input.style.setProperty("--frac", (+input.value) / (+input.max));
+    input.closest(".alpha-pick").querySelectorAll(".alpha-ticks span")
+      .forEach(sp => sp.classList.toggle("sel", +sp.dataset.i === +input.value));
+  }
+
+  /* ============================================================
+     TUTORIAL: free play at one fixed assistance level
+     ============================================================ */
+  /* text: shown all at once. steps: [{ html, highlight: [...] }], revealed
+     one by one with a Next button; each step pulses what it talks about:
+       "instrument"  the playing surface
+       "bars"        the note markers along its top
+       "arrow"       a lower <-> higher arrow across it
+       "slider"      the assistance slider
+       "tick"        the slider's label for this screen's setting
+     Notes can be played at any time; Continue needs min_notes of them.
+     adjustable: the slider works (free play); every move resets the
+     instrument to equal regions at the new assistance. */
+  class TutorialPlayPlugin {
+    constructor(jsPsych) { this.jsPsych = jsPsych; }
+    trial(display_element, trial) {
+      const self = this;
+      let alpha = trial.alpha;
+      const minNotes = trial.min_notes;
+      const steps = trial.steps;
+      const adjustable = trial.adjustable;
+      const settings = [{ alpha, t_ms: 0 }];    // free play: every assistance setting they tried
+      const notesByAlpha = {};
+      let nNotes = 0;
+      let step = steps ? 0 : null;
+      const body = steps
+        ? `<div class="steps">${steps.map((st, i) => `<p class="lead${i ? " pending" : ""}" id="tut-step-${i}">${st.html}</p>`).join("")}</div>`
+        : trial.text;
+      display_element.innerHTML = `
+      <div class="stage">
+        <h2>${trial.title}</h2>
+        ${body}
+        ${assistSliderHTML("tut-slider", ALPHA_VALUES.indexOf(alpha), !adjustable)}
+        <div class="instrument" id="tut-inst">
+          <canvas id="tut-canvas" class="live" width="${CFG.W}" height="${CFG.H}"></canvas>
+          <div class="hl-bars" id="tut-bars"></div>
+          <div class="dir-arrow" id="tut-arrow">
+            <span>lower</span>
+            <svg viewBox="0 0 100 16" preserveAspectRatio="none" aria-hidden="true">
+              <line x1="2" y1="8" x2="98" y2="8" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/>
+            </svg>
+            <span>higher</span>
+          </div>
+        </div>
+        <div class="btnrow" style="margin-top:22px">
+          <button class="act" id="tut-done">${trial.button_label}</button>
+        </div>
+      </div>`;
+      const $ = q => display_element.querySelector(q);
+      const canvas = $("#tut-canvas"), done = $("#tut-done");
+      const targets = {
+        instrument: $("#tut-inst"),
+        bars: $("#tut-bars"),
+        arrow: $("#tut-arrow"),
+        slider: display_element.querySelector(".alpha-pick"),
+        tick: display_element.querySelector(`.alpha-ticks span[data-i="${ALPHA_VALUES.indexOf(alpha)}"]`)
+      };
+      // the arrow's ends: drawn as text so they stay crisp at any width
+      const svg = targets.arrow.querySelector("svg");
+      svg.insertAdjacentHTML("beforeend",
+        '<polyline points="8,2 2,8 8,14" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/>' +
+        '<polyline points="92,2 98,8 92,14" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/>');
+
+      function showStep() {
+        Object.entries(targets).forEach(([k, el]) => el && el.classList.remove(k === "tick" ? "tick-hl" : "hl"));
+        targets.arrow.classList.remove("on");    // the arrow only shows during its own step
+        if (step === null) return;
+        $("#tut-step-" + step).classList.remove("pending");
+        (steps[step].highlight || []).forEach(k => {
+          const el = targets[k];
+          if (!el) return;
+          if (k === "arrow") el.classList.add("on");
+          el.classList.add(k === "tick" ? "tick-hl" : "hl");
+        });
+      }
+      const lastStep = () => step === null || step === steps.length - 1;
+      function update() {
+        done.textContent = lastStep() ? trial.button_label : "Next";
+        done.disabled = lastStep() && nNotes < minNotes;
+      }
+      showStep();
+      update();
+      const performer = makePerformer(canvas, alpha, null, {
+        continuous: true,
+        glow: false,                           // no pulsing outline in the tutorial
+        onNote: () => { nNotes++; notesByAlpha[alpha] = (notesByAlpha[alpha] || 0) + 1; update(); }
+      });
+      performer.arm();
+      const t0 = performance.now();
+      if (adjustable) {
+        const slider = $("#tut-slider"), out = $("#tut-slider-out");
+        slider.addEventListener("input", () => {
+          alpha = ALPHA_VALUES[+slider.value];
+          out.value = ASSIST_LABELS[+slider.value];
+          setSliderFill(slider);
+          performer.setAlpha(alpha);
+          performer.arm();                     // start over from equal regions
+          settings.push({ alpha, t_ms: Math.round(performance.now() - t0) });
+        });
+      }
+      done.onclick = () => {
+        if (!lastStep()) { step++; showStep(); update(); return; }
+        performer.stop();
+        self.jsPsych.finishTrial({
+          task: "tutorial",
+          step: trial.step,
+          instrument: instrumentName(alpha),
+          alpha,                               // free play: the setting they ended on
+          n_notes: nNotes,
+          dwell_ms: Math.round(performance.now() - t0),
+          ...(adjustable ? { settings_tried: settings, notes_by_alpha: notesByAlpha } : {})
+        });
+      };
+    }
+  }
+  TutorialPlayPlugin.info = {
+    name: "tutorial_play",
+    parameters: {
+      alpha: { type: jsPsychModule.ParameterType.FLOAT, default: 0 },
+      step: { type: jsPsychModule.ParameterType.STRING, default: "" },
+      title: { type: jsPsychModule.ParameterType.HTML_STRING, default: "" },
+      text: { type: jsPsychModule.ParameterType.HTML_STRING, default: "" },
+      steps: { type: jsPsychModule.ParameterType.OBJECT, default: null },
+      adjustable: { type: jsPsychModule.ParameterType.BOOL, default: false },
+      min_notes: { type: jsPsychModule.ParameterType.INT, default: CFG.TUTORIAL_MIN_NOTES },
+      button_label: { type: jsPsychModule.ParameterType.STRING, default: "Continue" }
+    }
+  };
+
+  /* ============================================================
+     IMITATION ROUND
+
+     listen   both sounds, unlabelled; both must be heard in full,
+              then "Show target" reveals it in place; Next moves on
+     choose   pick assistance (starts at the
+              midpoint each round, at the last choice on a retry)
+     play     one recording at the chosen assistance
+     review   target, other sound and the recording; try again (back
+              to choose) or accept
+     ============================================================ */
+  class ImitationRoundPlugin {
+    constructor(jsPsych) { this.jsPsych = jsPsych; }
+    trial(display_element, trial) {
+      const self = this;
+      const t_start = performance.now();
+      const sounds = trial.sounds;               // display order: [{ semis, role }, { semis, role }]
+      const tIdx = sounds.findIndex(s => s.role === "target");
+      const oIdx = 1 - tIdx;
+      let attempt = 0;
+      const attempts = [];
+      const choices = [];                        // one per attempt
+      const plays = [0, 0];
+      let ownPlays = 0;
+      const heard = [false, false];
+      let hoverEnabled = true;
+      let lock = null;                           // whatever is currently sounding
+      let revealed = false;
+      let revealRt = null, nextRt = null;
+      let reviewHeard = null;                    // during review: which of the 3 they've played
+      let sliderIndex = ALPHA_MID_INDEX;
+      let moved = false, chooseT0 = null;
+      let alpha = ALPHA_VALUES[sliderIndex];
+
+      display_element.innerHTML = `
+      <div class="stage">
+        <h2 id="r-head">Round ${trial.round_label}</h2>
+        ${CFG.SHOW_SECRETS ? `<p class="secret" id="r-secret">secret: ${trial.stimulus.secret}</p>` : ""}
+        <p class="caption" id="r-cap">Listen to both sounds. Then we'll tell you which to imitate.</p>
+        <div class="cues">
+          ${[0, 1].map(i => `
+          <div class="cue opt" id="wrap-${i}">
+            <div class="cuebox" id="cue-${i}"><div class="tag">Sound ${i + 1}</div><div class="hint" id="hint-${i}">hover to play</div></div>
+            <div class="mark" id="mark-${i}">&nbsp;</div>
+          </div>`).join("")}
+          <div class="cue you" id="you-wrap" style="display:none">
+            <div class="cuebox" id="cue-YOU"><div class="tag">your sound</div><div class="hint">hover to play</div></div>
+            <div class="mark">🎧</div>
+          </div>
+        </div>
+        <div id="r-choose" class="choose" style="display:none">
+          <p class="prompt">How much assistance do you want for this round?</p>
+          ${assistSliderHTML("r-slider", ALPHA_MID_INDEX, false)}
+        </div>
+        <div class="instrument locked gone" id="r-instwrap">
+          <canvas id="r-canvas" width="${CFG.W}" height="${CFG.H}"></canvas>
+          <div class="lockmsg">Choose your assistance first</div>
+        </div>
+        <div class="btnrow" id="r-btns"></div>
+        <p class="meta" id="r-meta"></p>
+      </div>`;
+
+      const $ = s => display_element.querySelector(s);
+      const canvas = $("#r-canvas"), instWrap = $("#r-instwrap"), youWrap = $("#you-wrap");
+      const head = $("#r-head"), cap = $("#r-cap"), btns = $("#r-btns"), meta = $("#r-meta");
+      const choose = $("#r-choose"), slider = $("#r-slider"), sliderOut = $("#r-slider-out");
+
+      slider.addEventListener("input", () => {
+        sliderIndex = +slider.value;
+        moved = true;
+        sliderOut.value = ASSIST_LABELS[sliderIndex];
+        setSliderFill(slider);
+      });
+
+      /* ---- one hover-to-play mechanism for both sounds and the recording ---- */
+      function cancelLock() {
+        if (!lock) return;
+        lock.stop();
+        clearTimeout(lock.timer);
+        lock.box.classList.remove("playing");
+        lock = null;
+      }
+      function hoverPlay(box, play, durMs, onEnd) {
+        const fire = () => {
+          if (!hoverEnabled || lock) return;
+          const stop = play();
+          box.classList.add("playing");
+          lock = { stop, box };
+          lock.timer = setTimeout(() => {
+            box.classList.remove("playing");
+            lock = null;
+            if (onEnd) onEnd();
+          }, durMs);
+        };
+        box.addEventListener("mouseenter", fire);
+        // for anyone whose pointer never leaves the box
+        box.addEventListener("click", fire);
+      }
+
+      [0, 1].forEach(i => {
+        const semis = sounds[i].semis;
+        hoverPlay(
+          $("#cue-" + i),
+          () => { plays[i]++; return playCue(semis); },
+          cueDurMs(semis),
+          () => {
+            heard[i] = true;
+            if (!revealed) $("#mark-" + i).innerHTML = '<span class="heard">✓ heard</span>';
+            markReviewHeard(i);
+            maybeAllowReveal();
+          }
+        );
+      });
+
+      const performer = makePerformer(canvas, alpha, (now, recording) => {
+        if (recording) meta.textContent = `Assistance: ${ASSIST_LABELS[sliderIndex]} · recording: ${(now / 1000).toFixed(1)}s`;
+      }, { startKey: trial.stimulus.target[0] });  // the target's first note is marked until they start
+      performer.idle();
+
+      // once they start playing, the sounds go quiet so nothing overlaps
+      canvas.addEventListener("pointerdown", () => {
+        if (performer.isRecording()) { cancelLock(); hoverEnabled = false; }
+      });
+
+      /* ---- listen; "Show target" unlocks once both are heard, reveals
+             the target in place, then becomes "Next" ---- */
+      btns.innerHTML = '<button class="act" id="r-next" disabled>Show target</button>';
+      $("#r-next").onclick = () => {
+        if (!revealed) { revealed = true; reveal(); return; }
+        nextRt = Math.round(performance.now() - t_start);
+        const secret = $("#r-secret");
+        if (secret) secret.remove();
+        showChoose();
+      };
+      function maybeAllowReveal() {
+        if (!revealed && heard[0] && heard[1]) $("#r-next").disabled = false;
+      }
+
+      function reveal() {
+        revealRt = Math.round(performance.now() - t_start);
+        const wrap = $("#wrap-" + tIdx);
+        wrap.classList.add("target", "revealing");
+        $("#wrap-" + oIdx).classList.add("other");
+        $("#mark-" + tIdx).innerHTML = '<span class="tmark">🎯 your target</span>';
+        $("#mark-" + oIdx).innerHTML = "&nbsp;";
+        cap.innerHTML = `<b>Sound ${tIdx + 1}</b> is your target.`;
+        setTimeout(() => wrap.classList.remove("revealing"), 1000);
+        $("#r-next").textContent = "Next";
+      }
+
+
+      function showChoose() {
+        reviewHeard = null;
+        youWrap.style.display = "none";
+        head.textContent = `Round ${trial.round_label}`;
+        cap.style.display = "none";             // no empty line under the heading while playing
+        choose.style.display = "";
+        slider.value = sliderIndex;
+        sliderOut.value = ASSIST_LABELS[sliderIndex];
+        setSliderFill(slider);
+        moved = false;
+        chooseT0 = performance.now();
+        instWrap.classList.remove("gone");
+        instWrap.classList.add("locked");
+        canvas.classList.remove("live");
+        performer.idle();
+        meta.textContent = "";
+        btns.innerHTML = '<button class="act" id="r-use">Use this assistance</button>';
+        $("#r-use").onclick = startPlay;
+      }
+
+      /* ---- play: recording starts on the first press, ends on its own ---- */
+      function startPlay() {
+        cancelLock();
+        alpha = ALPHA_VALUES[sliderIndex];
+        choices.push({
+          attempt: attempt + 1,
+          alpha,
+          assistance: ASSIST_LABELS[sliderIndex],
+          slider_index: sliderIndex,
+          moved,                                 // did they touch the slider before confirming?
+          rt_ms: Math.round(performance.now() - chooseT0)
+        });
+        performer.setAlpha(alpha);
+        choose.style.display = "none";
+        instWrap.classList.remove("locked");
+        canvas.classList.add("live");
+        meta.textContent = `Assistance: ${ASSIST_LABELS[sliderIndex]} · click anywhere on the instrument to begin.`;
+        btns.innerHTML = "";
+        hoverEnabled = true;
+        performer.onComplete = (trace) => {
+          canvas.classList.remove("live");
+          hoverEnabled = true;
+          review(trace);
+        };
+        performer.arm();
+      }
+
+      /* during review, all three sounds have to be played before they can
+         decide; otherwise "accept" is available without comparing */
+      function markReviewHeard(which) {
+        if (!reviewHeard) return;
+        if (which !== undefined) reviewHeard[which] = true;
+        const ready = reviewHeard[0] && reviewHeard[1] && reviewHeard.YOU;
+        const send = $("#r-send");
+        if (send) send.disabled = !ready;
+      }
+
+      /* ---- review ---- */
+      function review(trace) {
+        attempt++;
+        attempts.push({
+          attempt,
+          alpha,
+          assistance: assistLabel(alpha),
+          notes: trace.notes,
+          mousepos: trace.mousepos,
+          duration_ms: trace.duration_ms,
+          plays_target: plays[tIdx],
+          plays_other: plays[oIdx],
+          own_plays: ownPlays
+        });
+        head.textContent = "Will your partner guess the right sound?";
+        cap.style.display = "";
+        cap.textContent = "Listen to your sound and both options. Then try again, or accept it.";
+        instWrap.classList.add("gone");
+        meta.textContent = "";
+
+        youWrap.style.display = "";
+        const youBox = $("#cue-YOU");
+        const fresh = youBox.cloneNode(true);       // drop handlers from earlier attempts
+        youBox.replaceWith(fresh);
+        hoverPlay(
+          fresh,
+          () => { ownPlays++; return playNotes(trace.notes); },
+          trace.duration_ms + 350,
+          () => markReviewHeard("YOU")
+        );
+
+        const canRetry = attempt < trial.max_attempts;
+        btns.innerHTML = `
+        ${canRetry ? '<button class="act ghost" id="r-again">Try again</button>' : ""}
+        <button class="act" id="r-send" disabled>Accept</button>`;
+        reviewHeard = { 0: false, 1: false, YOU: false };
+        markReviewHeard();
+        if (canRetry) $("#r-again").onclick = () => { cancelLock(); showChoose(); };
+        $("#r-send").onclick = () => { cancelLock(); finish(); };
+      }
+
+      function finish() {
+        performer.stop();
+        const last = attempts[attempts.length - 1];
+        const st = trial.stimulus;
+        self.jsPsych.finishTrial({
+          task: "imitation_round",
+          trial_id: st.id,
+          level: st.level,                       // "contour" | "in_key" | "out_of_key"
+          model_favors: st.model_favors,         // "both" | "target" | "other"
+          target_semis: st.target,
+          other_semis: st.other,
+          target_notes: st.target.map(s => NAMES[s]),
+          other_notes: st.other.map(s => NAMES[s]),
+          target_position: tIdx + 1,             // shown as "Sound 1" or "Sound 2"
+          alpha_first: choices[0].alpha,
+          alpha_final: last.alpha,               // the accepted attempt's assistance
+          assistance_first: choices[0].assistance,
+          assistance_final: last.assistance,
+          alpha_choices: choices,
+          n_attempts: attempt,
+          reveal_rt_ms: revealRt,                // when they pressed "Show target"
+          next_rt_ms: nextRt,                    // when they left the reveal
+          plays_target: plays[tIdx],
+          plays_other: plays[oIdx],
+          own_plays: ownPlays,
+          recording_ms: last.duration_ms,
+          rt_total: Math.round(performance.now() - t_start),
+          attempts
+        });
+      }
+    }
+  }
+  ImitationRoundPlugin.info = {
+    name: "imitation_round",
+    parameters: {
+      stimulus: { type: jsPsychModule.ParameterType.OBJECT, default: undefined },
+      sounds: { type: jsPsychModule.ParameterType.OBJECT, default: undefined },
+      round_label: { type: jsPsychModule.ParameterType.STRING, default: "" },
+      max_attempts: { type: jsPsychModule.ParameterType.INT, default: CFG.MAX_ATTEMPTS }
+    }
+  };
+
+  /* ============================================================
+     TIMELINE
+     ============================================================ */
+  const jsPsych = initJsPsych({
+    on_finish: function () {
+      const all = jsPsych.data.get();
+      /* the deliverable: one entry per round, in the order it was played */
+      const rounds = all.filter({ task: "imitation_round" }).values().map((d, i) => ({
+        round_index: i,
+        trial_id: d.trial_id,
+        level: d.level,
+        model_favors: d.model_favors,
+        target: d.target_notes,
+        other: d.other_notes,
+        target_position: d.target_position,
+        alpha_first: d.alpha_first,
+        alpha_final: d.alpha_final,
+        alpha_choices: d.alpha_choices,
+        n_attempts: d.n_attempts,
+        traces: d.attempts.map(a => ({ alpha: a.alpha, notes: a.notes, mousepos: a.mousepos }))
+      }));
+      const tutorial = all.filter({ task: "tutorial" }).values()
+        .map(d => ({
+          step: d.step, alpha: d.alpha, n_notes: d.n_notes, dwell_ms: d.dwell_ms,
+          ...(d.settings_tried ? { settings_tried: d.settings_tried, notes_by_alpha: d.notes_by_alpha } : {})
+        }));
+      const survey = (all.filter({ task: "debrief" }).values()[0] || {}).response || {};
+      const subj = (all.values()[0] || {}).subject_id || "anon";
+      const log = { subject_id: subj, version: VERSION, tutorial, rounds, debrief: survey };
+      const pretty = JSON.stringify(log, null, 2);
+      const url = URL.createObjectURL(new Blob([pretty], { type: "application/json" }));
+      const rawUrl = URL.createObjectURL(new Blob([all.json()], { type: "application/json" }));
+      document.body.innerHTML = `
+      <div class="jspsych-content" style="margin:50px auto;max-width:820px;text-align:center">
+        <h1>Done. Thank you!</h1>
+        <p><a class="act" style="text-decoration:none;display:inline-block" href="${url}"
+              download="soundpictionary_${subj}.json">Download log</a>
+           <a class="act ghost" style="text-decoration:none;display:inline-block;margin-left:8px" href="${rawUrl}"
+              download="soundpictionary_${subj}_raw.json">Full jsPsych data</a></p>
+        <pre style="text-align:left;background:#f6f6f6;border:1px solid var(--rule);border-radius: 0;
+                    padding:14px;max-height:420px;overflow:auto;font-size:12px;line-height:1.45">${pretty.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</pre>
+      </div>`;
+      if (CFG.SAVE_URL) fetch(CFG.SAVE_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: pretty }).catch(() => { });
+    }
+  });
+
+  const VERSION = "imitation-assist-pilot";
+  const SUBJECT_ID = jsPsych.randomization.randomID(10);
+  jsPsych.data.addProperties({ subject_id: SUBJECT_ID, version: VERSION });
+
+  const timeline = [];
+
+  /* plain text screens, one button */
+  const textScreen = (html, button, onFinish, waitSec) => ({
+    type: jsPsychSurveyHtmlForm,
+    preamble: html,
+    html: "",
+    button_label: button,
+    on_load: waitSec ? () => lockButton(waitSec) : undefined,
+    on_finish: d => { d.task = "instructions"; if (onFinish) onFinish(d); }
+  });
+
+  // the form's button stays disabled for sec seconds, then unlocks
+  function lockButton(sec) {
+    const btn = document.querySelector("#jspsych-survey-html-form-next");
+    if (!btn) return;
+    btn.disabled = true;
+    setTimeout(() => { btn.disabled = false; }, sec * 1000);
+  }
+
+  timeline.push(textScreen(`
+    <h1>Let's play sound pictionary!</h1>
+    <p class="lead">In this study, you'll use a new musical instrument to imitate sounds.<br>Make sure to turn your sound on!</p>`,
+    "Continue", () => audio()));       // a click: the audio context may start now
+
+  timeline.push(textScreen(`
+    <h2>Tutorial</h2>
+    <p class="lead">First, let's learn how the instrument works.</p>`,
+    "Start"));
+
+  timeline.push({
+    type: TutorialPlayPlugin,
+    step: "none",
+    alpha: TUTORIAL_ALPHAS.none,
+    title: "",
+    steps: [
+      { html: "Click anywhere on the instrument to play notes.", highlight: ["instrument"] },
+      { html: "Gray bars along the top show where each note is.", highlight: ["bars"] },
+      { html: "Higher notes are on the right, and lower notes are on the left.", highlight: ["arrow"] },
+      { html: "The instrument has an <b>assistance</b> setting, which changes how the instrument behaves.", highlight: ["slider"] },
+      { html: "Here's the instrument with <b>no assistance</b>. Try it out!", highlight: [] }
+    ]
+  });
+
+  timeline.push({
+    type: TutorialPlayPlugin,
+    step: "medium",
+    alpha: TUTORIAL_ALPHAS.medium,
+    title: "",
+    text: `
+    <p class="lead">Here's the instrument with <b>medium assistance</b>. After each note, notes that might sound good next get <b>bigger</b>, so they're easier to hit. Other notes get smaller bars.<br><br>Play a few notes to see how it works.</p>`
+  });
+
+  timeline.push({
+    type: TutorialPlayPlugin,
+    step: "lots",
+    alpha: TUTORIAL_ALPHAS.lots,
+    title: "",
+    text: `
+    <p class="lead">Here's the instrument with <b>a lot of assistance</b>.<br><br>It's much easier to play notes that sound nice together, but other notes get tiny bars and are <b>much harder to reach</b>.</p>`
+  });
+
+  timeline.push({
+    type: TutorialPlayPlugin,
+    step: "free_play",
+    adjustable: true,
+    alpha: ALPHA_VALUES[1],
+    title: "",
+    text: `
+    <p class="lead">Now try it yourself! Move the slider to change the assistance, and play around as long as you like.</p>`,
+    button_label: "I'm ready"
+  });
+
+  timeline.push(textScreen(`
+    <h2>Your task</h2>
+    <p class="lead">Each round, you'll hear <b>two melodies</b>. Listen to both, then we'll tell you which one to imitate.</p>
+    <p class="lead">Someone else will listen to the sound you make, and guess which melody was your target.</p>
+    <p class="lead">Before each round, you get to choose <b>how much assistance</b> you want.</p>
+    <p class="lead">You don't have to make a perfect match! Just make it good enough for someone else to identify the correct sound.</p>`,
+    "Begin", null, 5));
+
+  const ORDER = jsPsych.randomization.shuffle(STIMULI.slice());
+  // the target is "Sound 1" in exactly half the rounds
+  const TARGET_FIRST = jsPsych.randomization.shuffle(ORDER.map((_, i) => i < ORDER.length / 2));
+  ORDER.forEach((st, i) => {
+    const targetFirst = TARGET_FIRST[i];
+    const t = { semis: st.target, role: "target" }, o = { semis: st.other, role: "other" };
+    timeline.push({
+      type: ImitationRoundPlugin,
+      stimulus: st,
+      sounds: targetFirst ? [t, o] : [o, t],
+      round_label: `${i + 1} of ${ORDER.length}`
+    });
+  });
+
+  timeline.push({
+    type: jsPsychSurveyHtmlForm,
+    preamble: `<h2>Last question</h2>`,
+    html: `
+    <label>How did you decide how much assistance to use in each round?
+      <textarea name="strategy" rows="4" style="width:100%;font:inherit;margin-top:6px"></textarea>
+    </label>
+    <label>Anything else you noticed about the instrument or the task? (optional)
+      <textarea name="comments" rows="3" style="width:100%;font:inherit;margin-top:6px"></textarea>
+    </label>`,
+    button_label: "Finish",
+    on_finish: d => { d.task = "debrief"; }
+  });
+
+  jsPsych.run(timeline);
+</script>
+
+</html>
