@@ -120,6 +120,27 @@
       pointer-events: none;
     }
 
+    /* choose screen: dimmed until clicked */
+    .instrument.dormant canvas {
+      opacity: .32;
+      filter: grayscale(1);
+    }
+
+    .practice-cover {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    .instrument.dormant .practice-cover {
+      display: flex;
+    }
+
     .instrument:not(.locked) .lockmsg {
       display: none;
     }
@@ -284,6 +305,11 @@
       color: var(--paper);
       border-radius: 0;
       cursor: pointer;
+    }
+
+    button.act.record {
+      background: var(--bad);
+      border-color: var(--bad);
     }
 
     button.act.ghost {
@@ -626,6 +652,24 @@
       display: inline-block;
       animation: markin .45s ease-out .15s both;
     }
+
+    /* a thin progress bar across the top for the whole study */
+    #progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: #ecebe7;
+      z-index: 10;
+    }
+
+    #progress>div {
+      height: 100%;
+      width: 0;
+      background: #9aa0ab;
+      transition: width .4s ease-out;
+    }
   </style>
 
 <body></body>
@@ -687,7 +731,8 @@
     TWEEN_MS: 80,           // marker resize animation; clicks always use the final layout
     MOUSE_SAMPLE_MS: 50,
     MAX_ATTEMPTS: 6,
-    TUTORIAL_MIN_NOTES: 6,  // presses needed before each tutorial screen can be left
+    TUTORIAL_MIN_NOTES: 6,
+    SONG_MAX_MS: 60000,     // the song at the end stops itself after this long  // presses needed before each tutorial screen can be left
     CUE_NOTE_MS: 800,
     SHOW_SECRETS: true,     // PILOT ONLY: red debug line naming how each pair differs
     SAVE_URL: null
@@ -1368,6 +1413,7 @@
      Moving while held changes nothing but the rubber band. The layout
      is recomputed on every press, anchored at the press.
      ============================================================ */
+  const LIVE_PERFORMERS = new Set();      // armed performers, so a debug skip can silence them
   function makePerformer(canvas, alpha, onTick, opts) {
     opts = opts || {};
     const continuous = !!opts.continuous;            // free play: never ends itself
@@ -1510,6 +1556,7 @@
     }
 
     function arm() {
+      LIVE_PERFORMERS.add(performer);
       noteEvents = []; mousePos = []; openNote = null;
       curKey = null; pressed = false;
       resetLayout();                         // every recording starts from equal regions
@@ -1518,6 +1565,7 @@
       raf = requestAnimationFrame(frame);
     }
     function stop() {
+      LIVE_PERFORMERS.delete(performer);
       armed = false; recording = false;
       if (pressed) { pressed = false; curKey = null; voiceOff(); }
       openNote = null;
@@ -1532,7 +1580,9 @@
     }
     // only between recordings: the layout is equal at the start of each one
     function setAlpha(a) { alpha = a; }
-    const performer = { arm, stop, idle, setAlpha, onComplete: null, isRecording: () => recording };
+    // end the recording now (a song's "I'm done"); does nothing before the first note
+    function finish() { if (recording) finishRecording(); }
+    const performer = { arm, stop, idle, setAlpha, finish, onComplete: null, isRecording: () => recording };
     return performer;
   }
 
@@ -1697,7 +1747,10 @@
 
      listen   both sounds, unlabelled; both must be heard in full,
               then "Show target" reveals it in place; Next moves on
-     choose   pick assistance (starts at the
+     choose   pick assistance and practice at it, nothing recorded; the
+              instrument is dimmed until clicked, and "Ready to record!"
+              waits for a slider move or that click;
+              every slider move resets the instrument (starts at the
               midpoint each round, at the last choice on a retry)
      play     one recording at the chosen assistance
      review   target, other sound and the recording; try again (back
@@ -1730,15 +1783,15 @@
       <div class="stage">
         <h2 id="r-head">Round ${trial.round_label}</h2>
         ${CFG.SHOW_SECRETS ? `<p class="secret" id="r-secret">secret: ${trial.stimulus.secret}</p>` : ""}
-        <p class="caption" id="r-cap">Listen to both sounds. Then we'll tell you which to imitate.</p>
+        <p class="caption" id="r-cap">Listen to both sounds. Then you'll see which one to imitate.</p>
         <div class="cues">
           ${[0, 1].map(i => `
           <div class="cue opt" id="wrap-${i}">
-            <div class="cuebox" id="cue-${i}"><div class="tag">Sound ${i + 1}</div><div class="hint" id="hint-${i}">hover to play</div></div>
+            <div class="cuebox" id="cue-${i}"><div class="tag">Sound ${i + 1}</div><div class="hint" id="hint-${i}">click to play</div></div>
             <div class="mark" id="mark-${i}">&nbsp;</div>
           </div>`).join("")}
           <div class="cue you" id="you-wrap" style="display:none">
-            <div class="cuebox" id="cue-YOU"><div class="tag">your sound</div><div class="hint">hover to play</div></div>
+            <div class="cuebox" id="cue-YOU"><div class="tag">your sound</div><div class="hint">click to play</div></div>
             <div class="mark">🎧</div>
           </div>
         </div>
@@ -1748,7 +1801,8 @@
         </div>
         <div class="instrument locked gone" id="r-instwrap">
           <canvas id="r-canvas" width="${CFG.W}" height="${CFG.H}"></canvas>
-          <div class="lockmsg">Choose your assistance first</div>
+          <div class="practice-cover" id="r-cover">click to practice</div>
+
         </div>
         <div class="btnrow" id="r-btns"></div>
         <p class="meta" id="r-meta"></p>
@@ -1759,14 +1813,33 @@
       const head = $("#r-head"), cap = $("#r-cap"), btns = $("#r-btns"), meta = $("#r-meta");
       const choose = $("#r-choose"), slider = $("#r-slider"), sliderOut = $("#r-slider-out");
 
+      let practiceNotes = 0, practiceSettings = [];
       slider.addEventListener("input", () => {
         sliderIndex = +slider.value;
         moved = true;
         sliderOut.value = ASSIST_LABELS[sliderIndex];
         setSliderFill(slider);
+        practiceSettings.push(ASSIST_LABELS[sliderIndex]);
+        practice.setAlpha(ALPHA_VALUES[sliderIndex]);
+        practice.arm();                          // start over from equal regions
+        enableReady();
       });
 
-      /* ---- one hover-to-play mechanism for both sounds and the recording ---- */
+      // "Ready to record!" waits until they touch the slider or open the instrument
+      function enableReady() {
+        const b = $("#r-use");
+        if (b) b.disabled = false;
+      }
+      let practiceOpened = false;
+      $("#r-cover").addEventListener("click", () => {
+        practiceOpened = true;
+        instWrap.classList.remove("dormant");
+        meta.textContent = "Practice as much as you like. Nothing is recorded yet.";
+        enableReady();
+      });
+
+      /* ---- one click-to-play mechanism for both sounds and the recording:
+             clicking a sounding box stops it, clicking another switches ---- */
       function cancelLock() {
         if (!lock) return;
         lock.stop();
@@ -1776,7 +1849,12 @@
       }
       function hoverPlay(box, play, durMs, onEnd) {
         const fire = () => {
-          if (!hoverEnabled || lock) return;
+          if (!hoverEnabled) return;
+          if (lock) {
+            const same = lock.box === box;
+            cancelLock();
+            if (same) return;
+          }
           const stop = play();
           box.classList.add("playing");
           lock = { stop, box };
@@ -1786,8 +1864,6 @@
             if (onEnd) onEnd();
           }, durMs);
         };
-        box.addEventListener("mouseenter", fire);
-        // for anyone whose pointer never leaves the box
         box.addEventListener("click", fire);
       }
 
@@ -1811,10 +1887,21 @@
       }, { startKey: trial.stimulus.target[0] });  // the target's first note is marked until they start
       performer.idle();
 
+      // practice on the choose screen: same canvas, never records; only
+      // one of the two performers is armed at a time
+      const practice = makePerformer(canvas, alpha, null, {
+        continuous: true,
+        glow: false,
+        startKey: trial.stimulus.target[0],
+        onNote: () => { practiceNotes++; }
+      });
+
       // once they start playing, the sounds go quiet so nothing overlaps
       canvas.addEventListener("pointerdown", () => {
         if (performer.isRecording()) { cancelLock(); hoverEnabled = false; }
+        else if (practicing) cancelLock();
       });
+      let practicing = false;
 
       /* ---- listen; "Show target" unlocks once both are heard, reveals
              the target in place, then becomes "Next" ---- */
@@ -1853,13 +1940,18 @@
         sliderOut.value = ASSIST_LABELS[sliderIndex];
         setSliderFill(slider);
         moved = false;
+        practiceNotes = 0;
+        practiceSettings = [];
+        practiceOpened = false;
         chooseT0 = performance.now();
-        instWrap.classList.remove("gone");
-        instWrap.classList.add("locked");
-        canvas.classList.remove("live");
-        performer.idle();
-        meta.textContent = "";
-        btns.innerHTML = '<button class="act" id="r-use">Use this assistance</button>';
+        instWrap.classList.remove("gone", "locked");
+        instWrap.classList.add("dormant");        // dimmed until they click it
+        canvas.classList.add("live");
+        practice.setAlpha(ALPHA_VALUES[sliderIndex]);
+        practice.arm();
+        practicing = true;
+        meta.innerHTML = "&nbsp;";
+        btns.innerHTML = '<button class="act record" id="r-use" disabled>Ready to record!</button>';
         $("#r-use").onclick = startPlay;
       }
 
@@ -1873,13 +1965,19 @@
           assistance: ASSIST_LABELS[sliderIndex],
           slider_index: sliderIndex,
           moved,                                 // did they touch the slider before confirming?
+          practice_opened: practiceOpened,       // did they click the instrument open?
+          practice_notes: practiceNotes,
+          practice_settings: practiceSettings,   // every slider position they moved through
           rt_ms: Math.round(performance.now() - chooseT0)
         });
+        practice.stop();
+        practicing = false;
+        instWrap.classList.remove("dormant");
         performer.setAlpha(alpha);
         choose.style.display = "none";
         instWrap.classList.remove("locked");
         canvas.classList.add("live");
-        meta.textContent = `Assistance: ${ASSIST_LABELS[sliderIndex]} · click anywhere on the instrument to begin.`;
+        meta.innerHTML = `<span style="color:var(--bad)">●</span> Recording. Assistance: ${ASSIST_LABELS[sliderIndex]}. Click anywhere on the instrument to begin.`;
         btns.innerHTML = "";
         hoverEnabled = true;
         performer.onComplete = (trace) => {
@@ -1890,12 +1988,11 @@
         performer.arm();
       }
 
-      /* during review, all three sounds have to be played before they can
-         decide; otherwise "accept" is available without comparing */
+      /* during review, they have to hear their own sound before accepting */
       function markReviewHeard(which) {
         if (!reviewHeard) return;
         if (which !== undefined) reviewHeard[which] = true;
-        const ready = reviewHeard[0] && reviewHeard[1] && reviewHeard.YOU;
+        const ready = reviewHeard.YOU;           // only their own sound is required
         const send = $("#r-send");
         if (send) send.disabled = !ready;
       }
@@ -1984,9 +2081,235 @@
   };
 
   /* ============================================================
+     SONG: an open-ended piece at the end, in the same flow as a round
+
+     practice  slider + instrument, dimmed until clicked; nothing is
+               recorded; every slider move resets the instrument;
+               "Ready to record!" waits for a slider move or that click
+     record    the song starts with the first note and ends on "I'm
+               done" (or at SONG_MAX_MS); silence never ends it
+     review    play it back, download it as a .wav, make another (back to
+               practice), or finish; every song is logged
+     ============================================================ */
+  class SongPlugin {
+    constructor(jsPsych) { this.jsPsych = jsPsych; }
+    trial(display_element, trial) {
+      const self = this;
+      const t0 = performance.now();
+      let sliderIndex = ALPHA_MID_INDEX;
+      const songs = [];
+      let lock = null;
+      let practiceNotes = 0, practiceSettings = [], practiceOpened = false, moved = false, chooseT0 = 0;
+
+      display_element.innerHTML = `
+      <div class="stage">
+        <p class="lead" id="s-text">${trial.text}</p>
+        <div id="s-choose" style="width:100%">
+          ${assistSliderHTML("s-slider", sliderIndex, false)}
+        </div>
+        <div class="instrument" id="s-inst">
+          <canvas id="s-canvas" width="${CFG.W}" height="${CFG.H}"></canvas>
+          <div class="practice-cover" id="s-cover">click to practice</div>
+        </div>
+        <div class="cues" id="s-review" style="display:none">
+          <div class="cue you" style="margin-left:0">
+            <div class="cuebox" id="s-song"><div class="tag">your song</div><div class="hint">click to play</div></div>
+            <div class="mark">🎧</div>
+          </div>
+        </div>
+        <div class="btnrow" id="s-btns"></div>
+        <p class="meta" id="s-meta"></p>
+      </div>`;
+      const $ = q => display_element.querySelector(q);
+      const canvas = $("#s-canvas"), slider = $("#s-slider"), sliderOut = $("#s-slider-out");
+      const inst = $("#s-inst"), btns = $("#s-btns"), meta = $("#s-meta"), text = $("#s-text");
+      const fmt = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
+
+      // practice and the real take share the canvas; only one is armed at a time
+      const practice = makePerformer(canvas, ALPHA_VALUES[sliderIndex], null, {
+        continuous: true, glow: false, onNote: () => { practiceNotes++; }
+      });
+      const performer = makePerformer(canvas, ALPHA_VALUES[sliderIndex], (now, recording) => {
+        if (!recording) return;
+        meta.innerHTML = `<span style="color:var(--bad)">●</span> Recording ${fmt(now)} / ${fmt(CFG.SONG_MAX_MS)}`;
+        const done = $("#s-done");
+        if (done) done.disabled = false;
+      }, { hardMaxMs: CFG.SONG_MAX_MS, silenceMs: Infinity });
+
+      function enableReady() { const b = $("#s-use"); if (b) b.disabled = false; }
+      slider.addEventListener("input", () => {
+        sliderIndex = +slider.value;
+        moved = true;
+        sliderOut.value = ASSIST_LABELS[sliderIndex];
+        setSliderFill(slider);
+        practiceSettings.push(ASSIST_LABELS[sliderIndex]);
+        practice.setAlpha(ALPHA_VALUES[sliderIndex]);
+        practice.arm();                          // start over from equal regions
+        enableReady();
+      });
+      $("#s-cover").addEventListener("click", () => {
+        practiceOpened = true;
+        inst.classList.remove("dormant");
+        meta.textContent = "Practice as much as you like. Nothing is recorded yet.";
+        enableReady();
+      });
+
+      /* ---- practice ---- */
+      function showChoose() {
+        stopLock();
+        text.style.display = "";
+        $("#s-choose").style.display = "";
+        $("#s-review").style.display = "none";
+        inst.classList.remove("gone");
+        inst.classList.add("dormant");           // dimmed until they click it
+        canvas.classList.add("live");
+        slider.value = sliderIndex;
+        sliderOut.value = ASSIST_LABELS[sliderIndex];
+        setSliderFill(slider);
+        practiceNotes = 0; practiceSettings = []; practiceOpened = false; moved = false;
+        chooseT0 = performance.now();
+        practice.setAlpha(ALPHA_VALUES[sliderIndex]);
+        practice.arm();
+        meta.innerHTML = "&nbsp;";
+        btns.innerHTML = '<button class="act record" id="s-use" disabled>Ready to record!</button>';
+        $("#s-use").onclick = startRecording;
+      }
+
+      /* ---- the take that counts ---- */
+      let choice = null;
+      function startRecording() {
+        choice = {
+          alpha: ALPHA_VALUES[sliderIndex],
+          assistance: ASSIST_LABELS[sliderIndex],
+          moved,
+          practice_opened: practiceOpened,
+          practice_notes: practiceNotes,
+          practice_settings: practiceSettings,
+          rt_ms: Math.round(performance.now() - chooseT0)
+        };
+        practice.stop();
+        $("#s-choose").style.display = "none";
+        inst.classList.remove("dormant");
+        meta.innerHTML = `<span style="color:var(--bad)">●</span> Recording. Assistance: ${choice.assistance}. Your song starts with your first note.`;
+        btns.innerHTML = '<button class="act" id="s-done" disabled>I\'m done</button>';
+        $("#s-done").onclick = () => performer.finish();
+        performer.onComplete = review;
+        performer.setAlpha(choice.alpha);
+        performer.arm();
+      }
+
+      /* ---- review ---- */
+      function review(trace) {
+        const song = {
+          index: songs.length,
+          ...choice,
+          notes: trace.notes,
+          mousepos: trace.mousepos,
+          duration_ms: trace.duration_ms,
+          plays: 0,
+          downloads: 0
+        };
+        songs.push(song);
+        text.style.display = "none";
+        inst.classList.add("gone");
+        canvas.classList.remove("live");
+        $("#s-review").style.display = "";
+        meta.textContent = "";
+        const old = $("#s-song"), box = old.cloneNode(true);   // drop earlier handlers
+        old.replaceWith(box);
+        box.addEventListener("click", () => {
+          if (lock) { const same = lock.box === box; stopLock(); if (same) return; }
+          song.plays++;
+          const stop = playNotes(song.notes);
+          box.classList.add("playing");
+          lock = { stop, box, timer: setTimeout(stopLock, song.duration_ms + 350) };
+        });
+        btns.innerHTML = `
+        <button class="act ghost" id="s-again">Make another</button>
+        <button class="act ghost" id="s-dl">Download song</button>
+        <button class="act" id="s-finish">Finish</button>`;
+        $("#s-again").onclick = showChoose;
+        $("#s-dl").onclick = () => { song.downloads++; downloadWav(song.notes, song.duration_ms, `my_song_${song.index + 1}.wav`); };
+        $("#s-finish").onclick = () => {
+          stopLock();
+          practice.stop();
+          performer.stop();
+          self.jsPsych.finishTrial({ task: "song", songs, dwell_ms: Math.round(performance.now() - t0) });
+        };
+      }
+      function stopLock() {
+        if (!lock) return;
+        lock.stop(); clearTimeout(lock.timer); lock.box.classList.remove("playing"); lock = null;
+      }
+
+      showChoose();
+    }
+  }
+  SongPlugin.info = {
+    name: "song",
+    parameters: {
+      text: { type: jsPsychModule.ParameterType.HTML_STRING, default: "" }
+    }
+  };
+
+  /* render notes with the instrument's voice (as playNotes) to a 16-bit
+     mono .wav and hand it to the browser as a download */
+  async function downloadWav(notes, durMs, filename) {
+    const sr = 44100;
+    const len = Math.ceil(sr * (durMs / 1000 + 0.5));
+    const oc = new OfflineAudioContext(1, len, sr);
+    for (const n of notes) {
+      const start = n.start / 1000, end = n.end / 1000 + 0.03;
+      const osc = oc.createOscillator(), g = oc.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(semiToHz(n.note), start);
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(0.20, start + 0.012);
+      g.gain.setValueAtTime(0.20, Math.max(start + 0.02, end - 0.02));
+      g.gain.linearRampToValueAtTime(0, end);
+      osc.connect(g).connect(oc.destination);
+      osc.start(start); osc.stop(end + 0.05);
+    }
+    const buf = await oc.startRendering();
+    const pcm = buf.getChannelData(0);
+    const out = new DataView(new ArrayBuffer(44 + pcm.length * 2));
+    const str = (o, s) => { for (let i = 0; i < s.length; i++) out.setUint8(o + i, s.charCodeAt(i)); };
+    str(0, "RIFF"); out.setUint32(4, 36 + pcm.length * 2, true); str(8, "WAVE");
+    str(12, "fmt "); out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 1, true);
+    out.setUint32(24, sr, true); out.setUint32(28, sr * 2, true); out.setUint16(32, 2, true); out.setUint16(34, 16, true);
+    str(36, "data"); out.setUint32(40, pcm.length * 2, true);
+    for (let i = 0; i < pcm.length; i++) out.setInt16(44 + i * 2, Math.max(-1, Math.min(1, pcm[i])) * 0x7fff, true);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([out], { type: "audio/wav" }));
+    a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  /* ============================================================
      TIMELINE
      ============================================================ */
+  /* share of the study's screens finished so far (every screen counts the
+     same); the bar is added on first use because jsPsych owns the body */
+  function setProgress(frac) {
+    let bar = document.getElementById("progress");
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.id = "progress";
+      bar.innerHTML = "<div></div>";
+      document.body.appendChild(bar);
+    }
+    bar.firstChild.style.width = `${Math.round(Math.min(1, frac) * 1000) / 10}%`;
+  }
+  /* each screen is one step, except the tutorial (from "Tutorial" through
+     free play), which counts as a single step: its screens carry
+     data.progress = 0 and free play carries the 1 */
+  let screensDone = 0;
+  const stepOf = t => (t.data && t.data.progress !== undefined ? t.data.progress : 1);
+  const totalSteps = () => timeline.reduce((a, t) => a + stepOf(t), 0);
+
   const jsPsych = initJsPsych({
+    on_trial_start: () => setProgress(screensDone / totalSteps()),
+    on_trial_finish: d => { screensDone += d.progress !== undefined ? d.progress : 1; setProgress(screensDone / totalSteps()); },
     on_finish: function () {
       const all = jsPsych.data.get();
       /* the deliverable: one entry per round, in the order it was played */
@@ -2009,9 +2332,16 @@
           step: d.step, alpha: d.alpha, n_notes: d.n_notes, dwell_ms: d.dwell_ms,
           ...(d.settings_tried ? { settings_tried: d.settings_tried, notes_by_alpha: d.notes_by_alpha } : {})
         }));
-      const survey = (all.filter({ task: "debrief" }).values()[0] || {}).response || {};
+      const songs = ((all.filter({ task: "song" }).values()[0] || {}).songs || [])
+        .map(g => ({
+          index: g.index, alpha: g.alpha, assistance: g.assistance, moved: g.moved,
+          practice_opened: g.practice_opened, practice_notes: g.practice_notes,
+          practice_settings: g.practice_settings, duration_ms: g.duration_ms,
+          plays: g.plays, downloads: g.downloads, notes: g.notes
+        }));
+      const debrief = (all.filter({ task: "debrief" }).values()[0] || {}).response || {};
       const subj = (all.values()[0] || {}).subject_id || "anon";
-      const log = { subject_id: subj, version: VERSION, tutorial, rounds, debrief: survey };
+      const log = { subject_id: subj, version: VERSION, tutorial, rounds, songs, debrief };
       const pretty = JSON.stringify(log, null, 2);
       const url = URL.createObjectURL(new Blob([pretty], { type: "application/json" }));
       const rawUrl = URL.createObjectURL(new Blob([all.json()], { type: "application/json" }));
@@ -2025,6 +2355,8 @@
         <pre style="text-align:left;background:#f6f6f6;border:1px solid var(--rule);border-radius: 0;
                     padding:14px;max-height:420px;overflow:auto;font-size:12px;line-height:1.45">${pretty.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</pre>
       </div>`;
+      studyDone = true;
+      setProgress(1);
       if (CFG.SAVE_URL) fetch(CFG.SAVE_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: pretty }).catch(() => { });
     }
   });
@@ -2058,14 +2390,18 @@
     <p class="lead">In this study, you'll use a new musical instrument to imitate sounds.<br>Make sure to turn your sound on!</p>`,
     "Continue", () => audio()));       // a click: the audio context may start now
 
-  timeline.push(textScreen(`
+  timeline.push({
+    ...textScreen(`
     <h2>Tutorial</h2>
     <p class="lead">First, let's learn how the instrument works.</p>`,
-    "Start"));
+      "Start"),
+    data: { progress: 0 }               // part of the tutorial's single step
+  });
 
   timeline.push({
     type: TutorialPlayPlugin,
     step: "none",
+    data: { progress: 0 },             // the tutorial counts as one step, at free play
     alpha: TUTORIAL_ALPHAS.none,
     title: "",
     steps: [
@@ -2080,6 +2416,7 @@
   timeline.push({
     type: TutorialPlayPlugin,
     step: "medium",
+    data: { progress: 0 },             // the tutorial counts as one step, at free play
     alpha: TUTORIAL_ALPHAS.medium,
     title: "",
     text: `
@@ -2089,6 +2426,7 @@
   timeline.push({
     type: TutorialPlayPlugin,
     step: "lots",
+    data: { progress: 0 },             // the tutorial counts as one step, at free play
     alpha: TUTORIAL_ALPHAS.lots,
     title: "",
     text: `
@@ -2098,11 +2436,12 @@
   timeline.push({
     type: TutorialPlayPlugin,
     step: "free_play",
+    data: { progress: 1 },
     adjustable: true,
     alpha: ALPHA_VALUES[1],
     title: "",
     text: `
-    <p class="lead">Now try it yourself! Move the slider to change the assistance, and play around as long as you like.</p>`,
+    <p class="lead">Now try it yourself! <b>Move the slider to change the assistance</b>, and play around as long as you like.</p>`,
     button_label: "I'm ready"
   });
 
@@ -2129,18 +2468,50 @@
   });
 
   timeline.push({
+    ...textScreen(`
+    <h2>Create a song!</h2>
+    <p class="lead">Now, use the instrument to make your own song.</p>`,
+      "Continue"),
+    data: { progress: 0 }               // counts with the song as one step
+  });
+
+  timeline.push({
+    type: SongPlugin,
+    text: "Set the slider however you want, then play when you're ready. You can download your song when you're done."
+  });
+
+  timeline.push({
     type: jsPsychSurveyHtmlForm,
-    preamble: `<h2>Last question</h2>`,
+    preamble: "",
     html: `
-    <label>How did you decide how much assistance to use in each round?
-      <textarea name="strategy" rows="4" style="width:100%;font:inherit;margin-top:6px"></textarea>
-    </label>
-    <label>Anything else you noticed about the instrument or the task? (optional)
-      <textarea name="comments" rows="3" style="width:100%;font:inherit;margin-top:6px"></textarea>
+    <label class="lead">How did you choose the level of assistance you selected?
+      <textarea name="assistance_strategy" rows="5" required style="width:100%;font:inherit;margin-top:8px;padding:8px;border:1px solid var(--rule)"></textarea>
     </label>`,
     button_label: "Finish",
     on_finish: d => { d.task = "debrief"; }
   });
+
+  /* DEBUG (add ?debug to the URL): the spacebar skips the current screen.
+     A skipped screen is saved as { task: "skipped" }, so it is left out of
+     the summary log. */
+  const DEBUG = new URLSearchParams(location.search).has("debug");
+  let studyDone = false;
+  if (DEBUG) {
+    jsPsych.data.addProperties({ debug: true });
+    const tag = document.createElement("div");
+    tag.textContent = "debug: space skips this screen";
+    tag.style.cssText = "position:fixed;right:10px;bottom:8px;font:12px system-ui,sans-serif;color:#c62828;z-index:10";
+    document.body.appendChild(tag);
+    document.addEventListener("keydown", e => {
+      if (e.code !== "Space" || e.repeat || studyDone) return;
+      const t = e.target;
+      if (t && (t.tagName === "TEXTAREA" || (t.tagName === "INPUT" && t.type === "text"))) return;
+      e.preventDefault();
+      LIVE_PERFORMERS.forEach(pf => pf.stop());
+      voiceOff();
+      jsPsych.finishTrial({ task: "skipped", skipped: true });
+    });
+  }
 
   jsPsych.run(timeline);
 </script>
